@@ -50,7 +50,7 @@ module.exports = {
 
     // ── Page 2: Studio ────────────────────────────────────────
     {
-      name: "Studio",
+      name: "Random",
       columns: [
         {
           size: "small",
@@ -100,7 +100,6 @@ module.exports = {
   // ── Tech Feeds (Studio page) ──────────────────────────────
   techFeeds: [
     { url: "https://blog.robintehofstee.com/rss.xml", title: "Personal Blog"  },
-    { url: "https://www.theregister.com/headlines.atom",               title: "The Register"  },
   ],
   techFeedsLimit: 20,
 
