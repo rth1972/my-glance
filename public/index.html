@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>my-glance</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            bg:'#0d0f13',surface:'#13161c',surface2:'#1a1e27',
+            border:'#252a36',text:'#c8cdd8',muted:'#5a6070',
+            accent:'#4f8ef7',ok:'#3ecf8e',danger:'#f7604f',
+          },
+          fontFamily: {
+            mono:['"IBM Plex Mono"','monospace'],
+            sans:['"IBM Plex Sans"','sans-serif'],
+          },
+        },
+      },
+    }
+  </script>
+  <style>
+    :root {
+      --bg:#0d0f13;--surface:#13161c;--surface2:#1a1e27;
+      --border:#252a36;--text:#c8cdd8;--muted:#5a6070;
+      --accent:#4f8ef7;--green:#3ecf8e;--red:#f7604f;
+      --mono:'IBM Plex Mono',monospace;--sans:'IBM Plex Sans',sans-serif;
+    }
+    html,body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:14px;line-height:1.5;}
+
+    /* ── APP LOADER ── */
+    #app-loader{position:fixed;inset:0;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#000;transition:opacity 1s ease-in-out;}
+    #app-loader.fade-out{opacity:0;pointer-events:none;}
+    #app-loader.hidden{display:none;}
+    #loader-bg{position:absolute;inset:0;background-image:url('/bg.jpg');background-size:cover;background-position:center;opacity:.3;}
+    #loader-gradient{position:absolute;inset:0;background:linear-gradient(to right,rgba(71,85,105,.4),rgba(71,85,105,.7),transparent);}
+    #loader-content{position:relative;z-index:10;display:flex;flex-direction:column;align-items:center;text-align:center;padding:0 1.5rem;opacity:0;transform:translateY(16px);transition:opacity .6s ease-out,transform .6s ease-out;}
+    #loader-content.visible{opacity:1;transform:translateY(0);}
+    #loader-title{font-size:clamp(2.2rem,8vw,4rem);font-weight:900;color:#fff;letter-spacing:-.02em;font-style:italic;text-transform:uppercase;filter:drop-shadow(0 2px 4px rgba(0,0,0,.8));line-height:1.05;}
+    #loader-title span{color:#ef4444;}
+    #loader-subtitle{margin-top:.75rem;font-size:clamp(.6rem,2vw,.75rem);font-family:var(--mono);color:rgba(255,255,255,.8);text-transform:uppercase;letter-spacing:.5em;opacity:0;transition:opacity .6s ease-out .15s;}
+    #loader-subtitle.visible{opacity:1;}
+    #loader-progress-wrap{margin-top:2.5rem;display:flex;align-items:center;justify-content:center;gap:1rem;opacity:0;transition:opacity .4s ease-out .3s;}
+    #loader-progress-wrap.visible{opacity:1;}
+    .loader-line{flex:1;height:1px;background:rgba(255,255,255,.2);max-width:64px;}
+    #loader-pct{font-family:var(--mono);font-size:.7rem;color:#fff;text-transform:uppercase;letter-spacing:.3em;min-width:80px;text-align:center;}
+
+    /* ── APP CONTENT ── */
+    #app-content{opacity:0;transition:opacity 1s ease-in-out;}
+    #app-content.visible{opacity:1;}
+
+    /* ── TICKER ── */
+    .ticker-name{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;}
+    .ticker-price{font-family:var(--mono);font-size:13px;font-weight:500;}
+    .ticker-change{font-family:var(--mono);font-size:11px;}
+    .up{color:var(--green);}.down{color:var(--red);}
+
+    /* ── CARD ── */
+    .card{background:var(--surface);border:1px solid var(--border);border-radius:6px;overflow:hidden;}
+    .card-header{padding:10px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+    .card-title{font-size:10px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-family:var(--mono);}
+    .card-body{padding:14px;}
+
+    /* ── CALENDAR ── */
+    .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;}
+    .cal-day-label{text-align:center;font-size:10px;color:var(--muted);padding:4px 0;font-family:var(--mono);}
+    .cal-day{text-align:center;padding:5px 2px;font-family:var(--mono);font-size:12px;border-radius:3px;color:var(--muted);}
+    .cal-day.this-month{color:var(--text);}
+    .cal-day.today{background:var(--accent);color:#fff;font-weight:600;}
+
+    /* ── WEATHER ── */
+    .weather-main{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:12px;}
+    .weather-temp{font-size:48px;font-weight:300;line-height:1;font-family:var(--mono);}
+    .weather-temp sup{font-size:18px;vertical-align:super;color:var(--muted);}
+    .weather-desc{text-align:right;}.weather-city{font-size:11px;color:var(--muted);}
+    .weather-condition{font-size:13px;margin-top:2px;}
+    .weather-meta{display:flex;gap:16px;font-size:11px;color:var(--muted);font-family:var(--mono);margin-bottom:14px;flex-wrap:wrap;}
+    .weather-forecast{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;}
+    .forecast-day{background:var(--surface2);border-radius:4px;padding:8px 4px;text-align:center;}
+    .forecast-label{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;font-family:var(--mono);}
+    .forecast-icon{font-size:18px;margin:4px 0;}.forecast-hi{font-size:12px;font-family:var(--mono);}
+    .forecast-lo{font-size:10px;color:var(--muted);font-family:var(--mono);}
+
+    /* ── MONITOR ── */
+    .monitor-list{display:flex;flex-direction:column;gap:6px;}
+    .monitor-item{display:flex;align-items:center;justify-content:space-between;padding:8px 10px;background:var(--surface2);border-radius:4px;}
+    .monitor-left{display:flex;align-items:center;gap:8px;}
+    .monitor-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+    .monitor-ms{font-family:var(--mono);font-size:10px;color:var(--muted);}
+    .dot-ok{background:var(--green);box-shadow:0 0 6px var(--green);}
+    .dot-fail{background:var(--red);box-shadow:0 0 6px var(--red);}
+
+    /* ── FEEDS ── */
+    .feed-list{display:flex;flex-direction:column;}
+    .feed-item{padding:9px 0;border-bottom:1px solid var(--border);}
+    .feed-item:last-child{border-bottom:none;}
+    .feed-item a{color:var(--text);text-decoration:none;font-size:13px;line-height:1.4;display:block;margin-bottom:3px;}
+    .feed-item a:hover{color:var(--accent);}
+    .feed-meta{display:flex;gap:8px;font-size:10px;color:var(--muted);font-family:var(--mono);}
+    .feed-source{color:var(--accent);}
+
+    /* ── BOOKMARKS/NOTES ── */
+    .bm-group{margin-bottom:14px;}.bm-group:last-child{margin-bottom:0;}
+    .bm-group-title{font-size:9px;font-family:var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;}
+    .bm-links{display:flex;flex-direction:column;gap:3px;}
+    .bm-link{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:4px;text-decoration:none;color:var(--text);font-size:13px;transition:background .15s;}
+    .bm-link:hover{background:var(--surface2);color:var(--accent);}
+    .bm-icon{font-size:14px;width:20px;text-align:center;}
+
+    /* ── SEARCH ── */
+    .search-wrap{display:flex;align-items:center;background:var(--surface2);border:1px solid var(--border);border-radius:6px;overflow:hidden;transition:border-color .15s;}
+    .search-wrap:focus-within{border-color:var(--accent);}
+    .search-icon{padding:0 12px;color:var(--muted);font-size:14px;flex-shrink:0;}
+    .search-input{flex:1;background:none;border:none;outline:none;color:var(--text);font-family:var(--sans);font-size:15px;padding:12px 12px 12px 0;}
+    .search-input::placeholder{color:var(--muted);}
+
+    /* ── NAVIDROME ── */
+    .nd-now-playing{display:flex;align-items:center;gap:10px;padding:10px;background:var(--surface2);border-radius:6px;margin-bottom:12px;}
+    .nd-cover{width:48px;height:48px;border-radius:4px;object-fit:cover;flex-shrink:0;background:var(--border);}
+    .nd-info{min-width:0;}
+    .nd-title{font-size:13px;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    .nd-artist{font-size:11px;color:var(--muted);font-family:var(--mono);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    .nd-playing-dot{width:6px;height:6px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green);flex-shrink:0;animation:pulse 1.5s ease-in-out infinite;}
+    .nd-recent-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
+    .nd-album{display:flex;flex-direction:column;gap:4px;}
+    .nd-album-cover{width:100%;aspect-ratio:1;border-radius:4px;object-fit:cover;background:var(--border);}
+    .nd-album-name{font-size:10px;color:var(--text);line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    .nd-album-artist{font-size:9px;color:var(--muted);font-family:var(--mono);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+
+    /* ── WALLPAPER ── */
+    .wallpaper-img{width:100%;aspect-ratio:16/9;object-fit:cover;border-radius:4px;display:block;}
+    .wallpaper-caption{font-size:10px;color:var(--muted);font-family:var(--mono);margin-top:8px;line-height:1.4;}
+
+    /* ── SHOUTCAST ── */
+    .sc-now-playing{background:var(--surface2);border-radius:6px;padding:12px;margin-bottom:12px;}
+    .sc-station-name{font-size:10px;font-family:var(--mono);text-transform:uppercase;letter-spacing:.12em;color:var(--muted);margin-bottom:8px;display:flex;align-items:center;gap:6px;}
+    .sc-live-dot{width:6px;height:6px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green);flex-shrink:0;}
+    .sc-live-dot.off{background:var(--muted);box-shadow:none;animation:none;}
+    .sc-song-title{font-size:14px;font-weight:600;color:var(--text);line-height:1.3;margin-bottom:4px;word-break:break-word;}
+    .sc-meta-row{display:flex;gap:12px;font-size:10px;color:var(--muted);font-family:var(--mono);flex-wrap:wrap;margin-bottom:12px;}
+    .sc-meta-val{color:var(--text);}
+    .sc-player{display:flex;align-items:center;gap:10px;}
+    .sc-play-btn{width:36px;height:36px;border-radius:50%;background:var(--accent);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:background .15s,transform .1s;}
+    .sc-play-btn:hover{background:#3a7de0;transform:scale(1.05);}
+    .sc-play-btn svg{width:16px;height:16px;fill:#fff;}
+    .sc-volume-wrap{flex:1;display:flex;align-items:center;gap:6px;}
+    .sc-vol-icon{font-size:13px;color:var(--muted);flex-shrink:0;}
+    .sc-volume{flex:1;-webkit-appearance:none;appearance:none;height:3px;border-radius:2px;background:var(--border);outline:none;cursor:pointer;}
+    .sc-volume::-webkit-slider-thumb{-webkit-appearance:none;width:12px;height:12px;border-radius:50%;background:var(--accent);cursor:pointer;}
+    .sc-history-label{font-size:9px;font-family:var(--mono);text-transform:uppercase;letter-spacing:.12em;color:var(--muted);margin-bottom:6px;margin-top:12px;}
+    .sc-history-list{display:flex;flex-direction:column;}
+    .sc-history-item{display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border);}
+    .sc-history-item:last-child{border-bottom:none;}
+    .sc-history-num{font-size:9px;color:var(--muted);font-family:var(--mono);width:14px;text-align:right;flex-shrink:0;}
+    .sc-history-title{font-size:12px;color:var(--text);flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+
+    /* ── MISC ── */
+    .loading{color:var(--muted);font-family:var(--mono);font-size:11px;padding:8px 0;}
+    .pulse{animation:pulse 1.5s ease-in-out infinite;}
+    @keyframes pulse{0%,100%{opacity:.4}50%{opacity:1}}
+    ::-webkit-scrollbar{width:4px;}
+    ::-webkit-scrollbar-track{background:transparent;}
+    ::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
+    .nav-btn.active{color:var(--text);background:var(--surface2);border:1px solid var(--border);}
+  </style>
+</head>
+<body class="bg-bg text-text font-sans min-h-screen">
+
+  <!-- ══ APP LOADER ══ -->
+  <div id="app-loader">
+    <div id="loader-bg"></div>
+    <div id="loader-gradient"></div>
+    <div id="loader-content">
+      <div id="loader-title">Robin <span>te Hofstee</span></div>
+      <div id="loader-subtitle">Personal Dashboard</div>
+      <div id="loader-progress-wrap">
+        <div class="loader-line"></div>
+        <span id="loader-pct">Loading 0%</span>
+        <div class="loader-line"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ APP CONTENT ══ -->
+  <div id="app-content">
+    <div id="ticker" class="sticky top-0 z-50 flex items-center h-[38px] bg-surface border-b border-border overflow-hidden">
+      <div id="ticker-label" class="shrink-0 px-3 md:px-4 h-full flex items-center font-mono text-[10px] uppercase tracking-widest text-muted border-r border-border">Markets</div>
+      <div id="ticker-track" class="flex items-center gap-6 md:gap-8 px-4 md:px-6 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"><span class="loading pulse">loading…</span></div>
+    </div>
+    <nav id="nav" class="sticky top-[38px] z-40 flex items-center h-[42px] bg-bg border-b border-border px-3 md:px-4 gap-1">
+      <span class="font-mono text-xs font-medium text-accent tracking-wide mr-3 md:mr-4 shrink-0">My Dashboard</span>
+      <div id="nav-tabs" class="flex items-center gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"></div>
+    </nav>
+    <div id="pages-root" class="mb-24"></div>
+  </div>
+
+  <script>
+  // ══ APP LOADER ══════════════════════════════════════════════════════════════
+  (function(){
+    const loader=document.getElementById('app-loader'),content=document.getElementById('app-content'),
+          pct=document.getElementById('loader-pct'),lc=document.getElementById('loader-content'),
+          sub=document.getElementById('loader-subtitle'),pw=document.getElementById('loader-progress-wrap');
+    let p=0;
+    setTimeout(()=>{lc.classList.add('visible');sub.classList.add('visible');pw.classList.add('visible');},80);
+    const iv=setInterval(()=>{
+      p=Math.min(p+Math.floor(Math.random()*10)+1,100);
+      pct.textContent=`Loading ${p}%`;
+      if(p>=100){clearInterval(iv);setTimeout(()=>{loader.classList.add('fade-out');content.classList.add('visible');setTimeout(()=>loader.classList.add('hidden'),1100);},600);}
+    },80);
+  })();
+
+  // ══ Helpers ═════════════════════════════════════════════════════════════════
+  const $=id=>document.getElementById(id);
+  const el=(tag,cls,html="")=>{const e=document.createElement(tag);if(cls)e.className=cls;e.innerHTML=html;return e;};
+
+  function timeAgo(d){
+    if(!d)return"";
+    const s=(Date.now()-new Date(d))/1000;
+    if(s<60)return`${Math.floor(s)}s ago`;
+    if(s<3600)return`${Math.floor(s/60)}m ago`;
+    if(s<86400)return`${Math.floor(s/3600)}h ago`;
+    return`${Math.floor(s/86400)}d ago`;
+  }
+
+  // Helper: build the card shell once, return the body element
+  // On subsequent calls, just return the existing body (no rebuild)
+  function ensureCard(container, title) {
+    let body = container.querySelector('.card-body');
+    if (!body) {
+      container.innerHTML = `
+        <div class="card">
+          <div class="card-header"><span class="card-title">${title}</span></div>
+          <div class="card-body"><span class="loading pulse">loading…</span></div>
+        </div>`;
+      body = container.querySelector('.card-body');
+    }
+    return body;
+  }
+
+  // Helper: patch text content of an element only if it has changed (avoids DOM thrash)
+  function patch(el, html) {
+    if (el && el.innerHTML !== html) el.innerHTML = html;
+  }
+
+  const WMO={0:"Clear",1:"Mostly Clear",2:"Partly Cloudy",3:"Overcast",45:"Foggy",48:"Icy Fog",51:"Light Drizzle",53:"Drizzle",55:"Heavy Drizzle",61:"Light Rain",63:"Rain",65:"Heavy Rain",71:"Light Snow",73:"Snow",75:"Heavy Snow",77:"Snow Grains",80:"Showers",81:"Rain Showers",82:"Violent Showers",85:"Snow Showers",86:"Heavy Snow Showers",95:"Thunderstorm",96:"Thunderstorm+Hail",99:"Severe Thunderstorm"};
+  const WMO_ICON={0:"☀️",1:"🌤️",2:"⛅",3:"☁️",45:"🌫️",48:"🌫️",51:"🌦️",53:"🌦️",55:"🌧️",61:"🌧️",63:"🌧️",65:"🌧️",71:"❄️",73:"🌨️",75:"🌨️",77:"🌨️",80:"🌦️",81:"🌧️",82:"⛈️",85:"🌨️",86:"🌨️",95:"⛈️",96:"⛈️",99:"⛈️"};
+  const DAYS=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+
+  // ══ Widget renderers ════════════════════════════════════════════════════════
+  // Pattern: ensureCard() builds the shell once. Subsequent calls only update
+  // the card-body contents — no blinking, no full rebuild.
+
+  function renderCalendar(container) {
+    const now=new Date(),year=now.getFullYear(),month=now.getMonth(),today=now.getDate();
+    const monthStr=now.toLocaleDateString("en-US",{month:"long",year:"numeric"});
+    const first=new Date(year,month,1).getDay(),daysIn=new Date(year,month+1,0).getDate();
+    let days=["Su","Mo","Tu","We","Th","Fr","Sa"].map(d=>`<div class="cal-day-label">${d}</div>`).join("");
+    for(let i=0;i<first;i++)days+=`<div class="cal-day"></div>`;
+    for(let d=1;d<=daysIn;d++)days+=`<div class="cal-day ${d===today?"today":"this-month"}">${d}</div>`;
+    // Calendar is static per day — always full build is fine, it never blinks
+    container.innerHTML=`<div class="card"><div class="card-header"><span class="card-title">Calendar</span><span style="font-family:var(--mono);font-size:11px;color:var(--muted)">${monthStr}</span></div><div class="card-body"><div class="cal-grid">${days}</div></div></div>`;
+  }
+
+  async function renderWeather(container) {
+    const body = ensureCard(container, 'Weather');
+    try {
+      const d=await fetch("/api/weather").then(r=>r.json());
+      const cur=d.current,code=cur.weather_code,unit=d.units==="imperial"?"F":"C";
+      const forecast=d.daily.time.slice(0,5).map((t,i)=>`<div class="forecast-day"><div class="forecast-label">${DAYS[new Date(t+"T12:00:00").getDay()]}</div><div class="forecast-icon">${WMO_ICON[d.daily.weather_code[i]]??"🌡️"}</div><div class="forecast-hi">${Math.round(d.daily.temperature_2m_max[i])}°</div><div class="forecast-lo">${Math.round(d.daily.temperature_2m_min[i])}°</div></div>`).join("");
+      const html=`<div class="weather-main"><div class="weather-temp">${Math.round(cur.temperature_2m)}<sup>°${unit}</sup></div><div class="weather-desc"><div style="font-size:28px">${WMO_ICON[code]??"🌡️"}</div><div class="weather-condition">${WMO[code]??"Unknown"}</div><div class="weather-city">${d.city}</div></div></div><div class="weather-meta"><span>Feels ${Math.round(cur.apparent_temperature)}°</span><span>Humidity ${cur.relative_humidity_2m}%</span><span>Wind ${Math.round(cur.wind_speed_10m)} ${d.units==="imperial"?"mph":"km/h"}</span></div><div class="weather-forecast">${forecast}</div>`;
+      patch(body, html);
+    } catch { patch(body, `<span style="color:var(--red);font-size:11px">Weather unavailable</span>`); }
+  }
+
+  async function renderFeeds(container) {
+    const body = ensureCard(container, 'Local News');
+    try {
+      const items=await fetch("/api/feeds").then(r=>r.json());
+      const html=items.length?`<div class="feed-list">${items.map(it=>`<div class="feed-item"><a href="${it.link}" target="_blank" rel="noopener">${it.title}</a><div class="feed-meta"><span class="feed-source">${it.source}</span><span>${timeAgo(it.date)}</span></div></div>`).join("")}</div>`:`<span class="loading">No items</span>`;
+      patch(body, html);
+    } catch { patch(body, `<span style="color:var(--red);font-size:11px">Feeds unavailable</span>`); }
+  }
+
+  async function renderTechFeeds(container) {
+    const body = ensureCard(container, 'Tech &amp; Self-Hosted');
+    try {
+      const items=await fetch("/api/techfeeds").then(r=>r.json());
+      const html=items.length?`<div class="feed-list">${items.map(it=>`<div class="feed-item"><a href="${it.link}" target="_blank" rel="noopener">${it.title}</a><div class="feed-meta"><span class="feed-source">${it.source}</span><span>${timeAgo(it.date)}</span></div></div>`).join("")}</div>`:`<span class="loading">No items</span>`;
+      patch(body, html);
+    } catch { patch(body, `<span style="color:var(--red);font-size:11px">Feeds unavailable</span>`); }
+  }
+
+  async function renderMonitor(container) {
+    const body = ensureCard(container, 'Services');
+    try {
+      const sites=await fetch("/api/monitor").then(r=>r.json());
+      const html=`<div class="monitor-list">${sites.map(s=>`<div class="monitor-item"><div class="monitor-left"><div class="monitor-dot ${s.ok?"dot-ok":"dot-fail"}"></div><a href="${s.url}" target="_blank" rel="noopener" style="color:inherit;text-decoration:none">${s.title}</a></div><span class="monitor-ms">${s.ok?s.ms+"ms":"offline"}</span></div>`).join("")}</div>`;
+      patch(body, html);
+    } catch {}
+  }
+
+  async function renderBookmarks(container) {
+    const body = ensureCard(container, 'Bookmarks');
+    try {
+      const groups=await fetch("/api/bookmarks").then(r=>r.json());
+      const html=groups.map(g=>`<div class="bm-group"><div class="bm-group-title">${g.group}</div><div class="bm-links">${g.links.map(l=>`<a class="bm-link" href="${l.url}" target="_blank" rel="noopener"><span class="bm-icon">${l.icon||"🔗"}</span>${l.title}</a>`).join("")}</div></div>`).join("");
+      patch(body, html);
+    } catch { patch(body, `<span style="color:var(--red);font-size:11px">Unavailable</span>`); }
+  }
+
+  async function renderNotes(container) {
+    const body = ensureCard(container, 'Quick Links');
+    try {
+      const groups=await fetch("/api/notes").then(r=>r.json());
+      const html=groups.map(g=>`<div class="bm-group"><div class="bm-group-title">${g.group}</div><div class="bm-links">${g.links.map(l=>`<a class="bm-link" href="${l.url}" target="_blank" rel="noopener"><span class="bm-icon">${l.icon||"🔗"}</span>${l.title}</a>`).join("")}</div></div>`).join("");
+      patch(body, html);
+    } catch { patch(body, `<span style="color:var(--red);font-size:11px">Unavailable</span>`); }
+  }
+
+  async function renderNavidrome(container) {
+    const body = ensureCard(container, '🎵 Navidrome');
+    try {
+      const data=await fetch("/api/navidrome").then(r=>r.json());
+      if(data.error)throw new Error(data.error);
+      const npHTML=data.nowPlaying.length
+        ?data.nowPlaying.map(t=>`<div class="nd-now-playing"><div class="nd-playing-dot"></div><img class="nd-cover" src="${t.coverUrl}" alt="${t.album}" onerror="this.style.visibility='hidden'"/><div class="nd-info"><div class="nd-title">${t.title}</div><div class="nd-artist">${t.artist} · ${t.album}</div></div></div>`).join("")
+        :`<div class="nd-now-playing" style="opacity:.5"><div style="font-size:20px">🎵</div><div class="nd-info"><div class="nd-title">Nothing playing</div><div class="nd-artist">Open Navidrome to start listening</div></div></div>`;
+      const recHTML=data.recent.length?`<div style="font-family:var(--mono);font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px">Recently Played</div><div class="nd-recent-grid">${data.recent.map(a=>`<a class="nd-album" href="${a.navUrl}" target="_blank" rel="noopener" title="${a.name} — ${a.artist}"><img class="nd-album-cover" src="${a.coverUrl}" alt="${a.name}" onerror="this.style.visibility='hidden'"/><div class="nd-album-name">${a.name}</div><div class="nd-album-artist">${a.artist}</div></a>`).join("")}</div>`:"";
+      patch(body, npHTML+recHTML);
+    } catch { patch(body, `<span style="color:var(--red);font-size:11px">Navidrome unavailable</span>`); }
+  }
+
+  async function renderWallpaper(container) {
+    const body = ensureCard(container, '🖼️ Bing Wallpaper');
+    try {
+      const w=await fetch("/api/wallpaper").then(r=>r.json());
+      if(w.error)throw new Error(w.error);
+      const html=`<a href="${w.url}" target="_blank" rel="noopener"><img class="wallpaper-img" src="${w.url}" alt="${w.title??''}" loading="lazy"/></a><div class="wallpaper-caption"><span style="color:var(--text);font-weight:500">${w.title??""}</span>${w.copyright?`<br/><span>${w.copyright}</span>`:""}</div>`;
+      patch(body, html);
+    } catch { patch(body, `<span style="color:var(--red);font-size:11px">Wallpaper unavailable</span>`); }
+  }
+
+  // ── SHOUTcast ───────────────────────────────────────────────────────────────
+  let _scAudio=null, _scPlaying=false;
+  function getScAudio(streamUrl){
+    if(!_scAudio){_scAudio=new Audio();_scAudio.volume=0.8;}
+    if(_scAudio.src!==streamUrl){
+      const was=_scPlaying;_scAudio.pause();_scAudio.src=streamUrl;
+      if(was)_scAudio.play().catch(()=>{});
+    }
+    return _scAudio;
+  }
+
+  async function renderShoutcast(container) {
+    const body = ensureCard(container, '📻 Radio');
+    try {
+      const data=await fetch("/api/shoutcast").then(r=>r.json());
+      const np=data.nowPlaying;
+      const audio=getScAudio(data.streamUrl);
+
+      let songLine=np.title||"Unknown", artistLine="";
+      if(np.title&&np.title.includes("-")){
+        const parts=np.title.split("-");
+        artistLine=parts[0].trim();
+        songLine=parts.slice(1).join("-").trim();
+      }
+
+      const historyHTML=data.history.length
+        ?`<div class="sc-history-label">Recent Tracks</div><div class="sc-history-list">${data.history.map((t,i)=>`<div class="sc-history-item"><span class="sc-history-num">${i+1}</span><span class="sc-history-title">${t.title||"Unknown"}</span></div>`).join("")}</div>`
+        :"";
+
+      const playIcon=_scPlaying
+        ?`<svg viewBox="0 0 24 24"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>`
+        :`<svg viewBox="0 0 24 24"><polygon points="5,3 19,12 5,21"/></svg>`;
+
+      const html=`
+        <div class="sc-now-playing">
+          <div class="sc-station-name">
+            <div class="sc-live-dot ${np.online?"":"off"}"></div>
+            ${np.serverTitle||data.name}
+          </div>
+          <div class="sc-song-title">${songLine}</div>
+          ${artistLine?`<div style="font-size:11px;color:var(--muted);font-family:var(--mono);margin-bottom:8px">${artistLine}</div>`:""}
+          <div class="sc-meta-row">
+            <span>👥 <span class="sc-meta-val">${np.listeners}</span> listeners</span>
+            ${np.bitrate?`<span>🎚 <span class="sc-meta-val">${np.bitrate}kbps</span></span>`:""}
+            ${np.genre?`<span>🎵 <span class="sc-meta-val">${np.genre}</span></span>`:""}
+          </div>
+          <div class="sc-player">
+            <button class="sc-play-btn" data-sc-play title="${_scPlaying?"Pause":"Play"}">${playIcon}</button>
+            <div class="sc-volume-wrap">
+              <span class="sc-vol-icon">🔈</span>
+              <input class="sc-volume" type="range" min="0" max="1" step="0.05" value="${audio.volume}" data-sc-vol/>
+              <span class="sc-vol-icon">🔊</span>
+            </div>
+          </div>
+        </div>
+        ${historyHTML}`;
+
+      patch(body, html);
+
+      // Re-attach event listeners after patch (only if DOM changed)
+      const playBtn=body.querySelector('[data-sc-play]');
+      const volSlider=body.querySelector('[data-sc-vol]');
+      if(playBtn) playBtn.addEventListener('click',()=>{
+        if(_scPlaying){audio.pause();_scPlaying=false;}
+        else{audio.play().catch(()=>{});_scPlaying=true;}
+        renderShoutcast(container); // refresh icon only
+      });
+      if(volSlider) volSlider.addEventListener('input',e=>{audio.volume=parseFloat(e.target.value);});
+
+    } catch { patch(ensureCard(container,'📻 Radio'), `<span style="color:var(--red);font-size:11px">Radio unavailable</span>`); }
+  }
+
+  function renderSearch(container){
+    // Search never needs refreshing — only build once
+    if(container.querySelector('.search-wrap'))return;
+    container.innerHTML=`<div class="card"><div class="card-body" style="padding:10px"><div class="search-wrap"><span class="search-icon">🔍</span><input class="search-input" placeholder="Search the web…" autocomplete="off"/></div></div></div>`;
+    container.querySelector('.search-input').addEventListener('keydown',e=>{
+      if(e.key==='Enter'&&e.target.value.trim()){window.open(`https://www.google.com/search?q=${encodeURIComponent(e.target.value.trim())}`,'_blank');e.target.value='';}
+    });
+  }
+
+  async function updateTime(container){
+    const target=container||document.querySelector('[data-widget-type="time"]');
+    if(!target)return;
+    try{
+      const data=await fetch("/api/time").then(r=>r.json());
+      // Build shell once
+      if(!target.querySelector('.card')){
+        target.innerHTML=`<div class="card"><div class="card-body text-center py-4"><div class="font-mono text-4xl font-light text-text tracking-tight" id="_time_val"></div><div class="font-mono text-xs text-muted mt-1 tracking-widest uppercase" id="_date_val"></div></div></div>`;
+      }
+      // Patch only the text values
+      const tv=target.querySelector('#_time_val'), dv=target.querySelector('#_date_val');
+      if(tv&&tv.textContent!==data.time)tv.textContent=data.time;
+      if(dv&&dv.textContent!==data.date)dv.textContent=data.date;
+    }catch{
+      if(!target.querySelector('.card'))
+        target.innerHTML=`<div class="card"><div class="card-body"><span class="text-danger text-xs font-mono">Time sync failed</span></div></div>`;
+    }
+  }
+
+  // ══ Widget dispatcher ════════════════════════════════════════════════════════
+  async function mountWidget(type,container){
+    switch(type){
+      case "time":       await updateTime(container);       break;
+      case "calendar":   renderCalendar(container);         break;
+      case "weather":    await renderWeather(container);    break;
+      case "feeds":      await renderFeeds(container);      break;
+      case "techfeeds":  await renderTechFeeds(container);  break;
+      case "monitor":    await renderMonitor(container);    break;
+      case "bookmarks":  await renderBookmarks(container);  break;
+      case "notes":      await renderNotes(container);      break;
+      case "navidrome":  await renderNavidrome(container);  break;
+      case "wallpaper":  await renderWallpaper(container);  break;
+      case "shoutcast":  await renderShoutcast(container);  break;
+      case "search":     renderSearch(container);           break;
+      default: container.innerHTML=`<div class="card"><div class="card-body"><span class="loading">Unknown widget: ${type}</span></div></div>`;
+    }
+  }
+
+  // ══ Page builder ════════════════════════════════════════════════════════════
+  async function buildPage(page){
+    const pageEl=el("div","page hidden");
+    const isSlim=page.columns.length===1&&page.columns[0].size==="full";
+    pageEl.classList.add("px-3","py-3","md:px-4","md:py-4","mx-auto","max-w-[1600px]");
+    const numCols=page.columns.length;
+    const grid=el("div","");
+    if(isSlim)           grid.className="max-w-lg mx-auto mt-8 md:mt-12 flex flex-col gap-4";
+    else if(numCols===1) grid.className="flex flex-col gap-4";
+    else if(numCols===2) grid.className="flex flex-col md:flex-row gap-4 items-start";
+    else                 grid.className="flex flex-col grid md:grid-cols-2 lg:grid lg:grid-cols-[280px_1fr_280px] gap-4 items-start";
+    for(const col of page.columns){
+      const colEl=el("div","flex flex-col gap-4 min-w-0");
+      if(!isSlim&&numCols===3&&col.size==="full")colEl.classList.add("col-span-1", "md:col-span-2","lg:col-span-1");
+      if(!isSlim&&numCols===2)col.size==="small"?colEl.classList.add("md:w-[280px]","shrink-0"):colEl.classList.add("flex-1");
+      for(const widget of col.widgets){
+        const wEl=el("div","");
+        wEl.dataset.widgetType=widget;
+        colEl.appendChild(wEl);
+        await mountWidget(widget,wEl);
+      }
+      grid.appendChild(colEl);
+    }
+    pageEl.appendChild(grid);
+    return pageEl;
+  }
+
+  // ══ Markets ══════════════════════════════════════════════════════════════════
+  async function loadMarkets(){
+    try{
+      const data=await fetch("/api/markets").then(r=>r.json());
+      if(!Array.isArray(data))throw new Error("Invalid");
+      const html=data.map(m=>{
+        const chg=parseFloat(m.change)||0,dir=chg>=0?"up":"down",sign=chg>=0?"+":"";
+        const raw=typeof m.price==="string"?parseFloat(m.price):m.price;
+        const price=raw!=null?raw.toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2}):"—";
+        return `<div class="ticker-item flex items-center gap-2 whitespace-nowrap shrink-0"><span class="ticker-name">${m.name}</span><span class="ticker-price ${dir}">$${price}</span><span class="ticker-change ${dir}">${sign}${chg.toFixed(2)}%</span></div>`;
+      }).join('<span style="color:var(--border);user-select:none;padding:0 4px">│</span>');
+      patch($("ticker-track"), html);
+    }catch{patch($("ticker-track"),`<span style="color:var(--red);font-size:11px">Markets unavailable</span>`);}
+  }
+
+  // ══ Nav ══════════════════════════════════════════════════════════════════════
+  let currentPage=0;
+  function switchPage(idx){
+    document.querySelectorAll(".page").forEach((p,i)=>{p.classList.toggle("hidden",i!==idx);p.classList.toggle("block",i===idx);});
+    document.querySelectorAll(".nav-btn").forEach((b,i)=>b.classList.toggle("active",i===idx));
+    currentPage=idx;
+    const input=document.querySelectorAll(".page")[idx]?.querySelector(".search-input");
+    if(input)setTimeout(()=>input.focus(),50);
+  }
+
+  // ══ Init ═════════════════════════════════════════════════════════════════════
+  (async()=>{
+    const pages=await fetch("/api/pages").then(r=>r.json());
+    const root=$("pages-root"),tabs=$("nav-tabs");
+    for(let i=0;i<pages.length;i++){
+      const btn=document.createElement("button");
+      btn.className="nav-btn px-3 py-1 rounded font-mono text-[11px] uppercase tracking-wide cursor-pointer border-0 bg-transparent text-muted transition-all hover:text-text hover:bg-surface";
+      btn.textContent=pages[i].name;
+      btn.addEventListener("click",()=>switchPage(i));
+      tabs.appendChild(btn);
+      root.appendChild(await buildPage(pages[i]));
+    }
+    switchPage(0);
+    loadMarkets();
+    updateTime();
+
+    setInterval(updateTime,    10_000);
+    setInterval(loadMarkets,   60_000);
+    setInterval(()=>document.querySelectorAll('[data-widget-type="monitor"]').forEach(e=>renderMonitor(e)),     30_000);
+    setInterval(()=>document.querySelectorAll('[data-widget-type="feeds"]').forEach(e=>renderFeeds(e)),        300_000);
+    setInterval(()=>document.querySelectorAll('[data-widget-type="techfeeds"]').forEach(e=>renderTechFeeds(e)),300_000);
+    setInterval(()=>document.querySelectorAll('[data-widget-type="weather"]').forEach(e=>renderWeather(e)),    600_000);
+    setInterval(()=>document.querySelectorAll('[data-widget-type="navidrome"]').forEach(e=>renderNavidrome(e)), 30_000);
+    setInterval(()=>document.querySelectorAll('[data-widget-type="shoutcast"]').forEach(e=>renderShoutcast(e)), 10_000);
+    setInterval(()=>document.querySelectorAll('[data-widget-type="wallpaper"]').forEach(e=>renderWallpaper(e)),3600_000);
+  })();
+  </script>
+</body>
+</html>
