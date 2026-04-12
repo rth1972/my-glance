@@ -1,5 +1,5 @@
 MyGlance.registerWidget("navidrome", {
-  refresh: 30_000,
+  refresh: 0,
   css: `
     .nd-now-playing{display:flex;align-items:center;gap:10px;padding:10px;background:var(--surface2);border-radius:6px;margin-bottom:12px;}
     .nd-cover{width:48px;height:48px;border-radius:4px;object-fit:cover;flex-shrink:0;background:var(--border);}
@@ -52,4 +52,12 @@ MyGlance.registerWidget("navidrome", {
     MyGlance.patch(body, npHTML + recHTML);
   },
   async fetch() { return window.fetch("/api/navidrome").then(r => r.json()); },
+});
+
+MyGlance.onWsEvent("navidrome", (data) => {
+  const def = MyGlance._widgets.navidrome;
+  if (!def) return;
+  document.querySelectorAll(`[data-widget-type="navidrome"]`).forEach(el => {
+    def.render.call(def, el, data);
+  });
 });

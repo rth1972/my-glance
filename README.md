@@ -28,10 +28,12 @@ Open → **http://localhost:3333**
 | `feeds`        | RSS/Atom feed URLs (Home page)                             |
 | `techFeeds`    | RSS/Atom feed URLs (Studio page)                           |
 | `monitor`      | Service URLs to ping for uptime monitoring                 |
-| `bookmarks`    | Grouped links with emoji icons (Home page)                 |
+| `bookmarks`    | Grouped links with emoji icons (Home page)                |
 | `notes`        | Grouped quick links (Studio page)                          |
 | `navidrome`    | URL, username, password, recent album count                |
 | `shoutcast`    | Stats URL, stream URL, station name, history count         |
+| `proxmox`      | URL, API token ID, API token secret, node name            |
+| `gitea`        | URL, username, API token                                   |
 
 ### Pages & widgets
 
@@ -59,7 +61,7 @@ Every widget is a self-contained plugin in the `plugins/` folder. The server aut
 ```
 plugins/
   weather/
-    server.js   ← registers GET /api/weather
+    server.js   ← registers Express routes + WebSocket broadcasts
     client.js   ← calls MyGlance.registerWidget("weather", { ... })
   mywidget/
     server.js   ← your new API route
@@ -72,42 +74,58 @@ plugins/
 
 ### Available plugins
 
-| Plugin       | Type    | Description                                      |
-|--------------|---------|--------------------------------------------------|
-| `markets`    | ticker  | Stock/crypto prices in the top bar               |
-| `time`       | widget  | Live clock                                       |
-| `calendar`   | widget  | Current month calendar                           |
-| `weather`    | widget  | Current conditions + 5-day forecast (open-meteo) |
-| `feeds`      | widget  | RSS/Atom news feeds                              |
-| `techfeeds`  | widget  | Tech & self-hosted RSS feeds                     |
-| `monitor`    | widget  | Service uptime monitor with response times       |
-| `bookmarks`  | widget  | Grouped bookmark links                           |
-| `notes`      | widget  | Quick links panel                                |
-| `search`     | widget  | Google search bar                                |
-| `navidrome`  | widget  | Now playing + recently played albums             |
-| `shoutcast`  | widget  | Radio station — now playing, listeners, player   |
-| `wallpaper`  | widget  | Bing photo of the day                            |
+| Plugin            | Type    | Description                                      |
+|-------------------|---------|--------------------------------------------------|
+| `markets`         | ticker  | Stock/crypto prices in the top bar              |
+| `time`            | widget  | Live clock (real-time via WebSocket)             |
+| `calendar`        | widget  | Current month calendar                           |
+| `weather`         | widget  | Current conditions + 5-day forecast (open-meteo) |
+| `feeds`           | widget  | RSS/Atom news feeds                              |
+| `techfeeds`       | widget  | Tech & self-hosted RSS feeds                    |
+| `monitor`         | widget  | Service uptime monitor with response times       |
+| `uptime-history`  | widget  | Historical uptime tracking with sparklines       |
+| `bookmarks`       | widget  | Grouped bookmark links                           |
+| `notes`           | widget  | Quick links panel                                |
+| `search`          | widget  | Google search bar                                |
+| `navidrome`       | widget  | Now playing + recently played albums             |
+| `shoutcast`       | widget  | Radio station — now playing, listeners, player   |
+| `wallpaper`       | widget  | Bing photo of the day                           |
+| `proxmox`         | widget  | Proxmox VE node status + VM/container list       |
+| `gitea-activity`  | widget  | Gitea repositories + activity feed               |
 
-### Writing a plugin
+---
 
-**`server.js`** — receives `(app, config)` and registers Express routes:
+## Real-time updates (WebSocket)
+
+Plugins use WebSocket for real-time updates instead of client-side polling. When data changes on the server, it broadcasts to all connected clients instantly.
+
+### Writing a plugin with WebSocket
+
+**`server.js`** — use `broadcast(event, data)` to push updates:
+
 ```js
-const fetch = require("node-fetch");
 module.exports = function register(app, config) {
-  app.get("/api/myplugin", async (req, res) => {
-    const data = await fetch("https://example.com/api").then(r => r.json());
-    res.json(data);
+  const broadcast = app.get("broadcast");
+
+  // Push updates every 10 seconds
+  setInterval(() => {
+    const data = { time: new Date().toISOString() };
+    broadcast("myplugin", data);
+  }, 10_000);
+
+  // HTTP endpoint still works for initial page load
+  app.get("/api/myplugin", (req, res) => {
+    res.json({ time: new Date().toISOString() });
   });
 };
 ```
 
-**`client.js`** — calls `MyGlance.registerWidget(name, def)`:
+**`client.js`** — subscribe to WebSocket events:
+
 ```js
 MyGlance.registerWidget("myplugin", {
-  refresh: 60_000,   // ms between refreshes, 0 = never
-  css: `
-    .my-class { color: var(--accent); }
-  `,
+  refresh: 0,  // 0 = no client polling, use WebSocket instead
+  css: `.my-class { color: var(--accent); }`,
   render(container, data) {
     const body = MyGlance.ensureCard(container, "My Plugin");
     if (!data) return;
@@ -117,17 +135,52 @@ MyGlance.registerWidget("myplugin", {
     return window.fetch("/api/myplugin").then(r => r.json());
   },
 });
+
+// Subscribe to real-time updates
+MyGlance.onWsEvent("myplugin", (data) => {
+  const def = MyGlance._widgets.myplugin;
+  if (!def) return;
+  document.querySelectorAll(`[data-widget-type="myplugin"]`).forEach(el => {
+    def.render.call(def, el, data);
+  });
+});
 ```
 
-**Available helpers inside plugins:**
+### Available helpers
 
 | Helper | Description |
 |--------|-------------|
 | `MyGlance.ensureCard(container, title)` | Builds the card shell once, returns the body element |
 | `MyGlance.patch(el, html)` | Updates innerHTML only if it changed (no blink) |
 | `MyGlance.timeAgo(dateStr)` | Converts a date string to "5m ago" etc. |
+| `MyGlance.onWsEvent(event, handler)` | Subscribe to real-time WebSocket updates |
+| `MyGlance._widgets[name]` | Access registered widget definitions |
+| `app.get("broadcast")` (server) | Get the broadcast function for WebSocket推送 |
 
-The special **markets ticker** uses `MyGlance.registerMarkets({ refresh, fetch, render })` instead of `registerWidget` — its `render(data)` writes directly into `#ticker-track`.
+---
+
+## Reverse proxy (Nginx Proxy Manager)
+
+For Nginx Proxy Manager, add this location block to your proxy host:
+
+```nginx
+# WebSocket support
+location /ws {
+    proxy_pass http://127.0.0.1:3333;
+    proxy_http_version 1.1;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection "upgrade";
+    proxy_set_header Host $host;
+    proxy_read_timeout 86400;
+}
+
+# Main app
+location / {
+    proxy_pass http://127.0.0.1:3333;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+}
+```
 
 ---
 
@@ -158,7 +211,7 @@ pm2 stop my-glance
 ```
 my-glance/
 ├── config.js            ← only file you edit
-├── server.js            ← Express server + plugin auto-loader
+├── server.js            ← Express server + WebSocket + plugin auto-loader
 ├── package.json
 ├── public/
 │   ├── index.html       ← shell + MyGlance plugin host
@@ -168,17 +221,18 @@ my-glance/
     │   ├── server.js
     │   └── client.js
     ├── weather/
-    │   ├── server.js
-    │   └── client.js
     ├── time/
     ├── calendar/
     ├── feeds/
     ├── techfeeds/
     ├── monitor/
+    ├── uptime-history/
     ├── bookmarks/
     ├── notes/
     ├── search/
     ├── navidrome/
     ├── shoutcast/
-    └── wallpaper/
+    ├── wallpaper/
+    ├── proxmox/
+    └── gitea-activity/
 ```

@@ -1,5 +1,5 @@
 MyGlance.registerWidget("proxmox", {
-  refresh: 10_000,
+  refresh: 0,
   css: `
     .pve-section { margin-bottom: 14px; }
     .pve-label { font-size: 9px; font-family: var(--mono); color: var(--muted); text-transform: uppercase; letter-spacing: .1em; margin-bottom: 6px; }
@@ -7,7 +7,6 @@ MyGlance.registerWidget("proxmox", {
     .pve-bar-name { font-size: 11px; color: var(--text); min-width: 60px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .pve-bar-track { flex: 1; height: 5px; background: var(--surface2); border-radius: 3px; overflow: hidden; }
     .pve-bar-fill { height: 100%; border-radius: 3px; transition: width .4s ease; }
-    .pve-bar-pct { font-size: 10px; font-family: var(--mono); color: var(--muted); min-width: 30px; text-align: right; }
     .pve-bar-fill.ok   { background: var(--green); }
     .pve-bar-fill.warn { background: #f5a623; }
     .pve-bar-fill.crit { background: var(--red); }
@@ -68,4 +67,12 @@ MyGlance.registerWidget("proxmox", {
     `);
   },
   async fetch() { return window.fetch("/api/proxmox").then(r => r.json()); },
+});
+
+MyGlance.onWsEvent("proxmox", (data) => {
+  const def = MyGlance._widgets.proxmox;
+  if (!def) return;
+  document.querySelectorAll(`[data-widget-type="proxmox"]`).forEach(el => {
+    def.render.call(def, el, data);
+  });
 });

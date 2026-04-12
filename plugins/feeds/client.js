@@ -1,5 +1,5 @@
 MyGlance.registerWidget("feeds", {
-  refresh: 300_000,
+  refresh: 0,
   css: `
     .feed-list{display:flex;flex-direction:column;}
     .feed-item{padding:9px 0;border-bottom:1px solid var(--border);}
@@ -22,4 +22,12 @@ MyGlance.registerWidget("feeds", {
     MyGlance.patch(body, html);
   },
   async fetch() { return window.fetch("/api/feeds").then(r => r.json()); },
+});
+
+MyGlance.onWsEvent("feeds", (data) => {
+  const def = MyGlance._widgets.feeds;
+  if (!def) return;
+  document.querySelectorAll(`[data-widget-type="feeds"]`).forEach(el => {
+    def.render.call(def, el, data);
+  });
 });

@@ -1,6 +1,5 @@
-// Widget: weather
 MyGlance.registerWidget("weather", {
-  refresh: 600_000,
+  refresh: 0,
   css: `
     .weather-main{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:12px;}
     .weather-temp{font-size:48px;font-weight:300;line-height:1;font-family:var(--mono);}
@@ -46,4 +45,12 @@ MyGlance.registerWidget("weather", {
       <div class="weather-forecast">${forecast}</div>`);
   },
   async fetch() { return window.fetch("/api/weather").then(r => r.json()); },
+});
+
+MyGlance.onWsEvent("weather", (data) => {
+  const def = MyGlance._widgets.weather;
+  if (!def) return;
+  document.querySelectorAll(`[data-widget-type="weather"]`).forEach(el => {
+    def.render.call(def, el, data);
+  });
 });

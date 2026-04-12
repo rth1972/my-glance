@@ -3,6 +3,7 @@ const https  = require("https");
 const crypto = require("crypto");
 
 module.exports = function register(app, config) {
+  const broadcast = app.get("broadcast");
   const localAgent = new https.Agent({ rejectUnauthorized: false });
 
   function subsonicAuth() {
@@ -10,6 +11,40 @@ module.exports = function register(app, config) {
     const token = crypto.createHash("md5").update(config.navidrome.password + salt).digest("hex");
     return `u=${config.navidrome.user}&t=${token}&s=${salt}&v=1.16.1&c=my-glance&f=json`;
   }
+
+  async function fetchNavidrome() {
+    try {
+      const { url, recentCount = 6 } = config.navidrome;
+      const auth = subsonicAuth();
+
+      const npData = await fetch(`${url}/rest/getNowPlaying?${auth}`).then(r => r.json());
+      const npList = npData?.["subsonic-response"]?.nowPlaying?.entry || [];
+      const nowPlaying = npList.map(e => ({
+        title:    e.title,
+        artist:   e.artist,
+        album:    e.album,
+        coverUrl: `${url}/rest/getCoverArt?id=${e.coverArt}&size=80&${auth}`,
+        navUrl:   url,
+      }));
+
+      const recData = await fetch(`${url}/rest/getAlbumList2?type=recent&size=${recentCount}&${auth}`).then(r => r.json());
+      const recList = recData?.["subsonic-response"]?.albumList2?.album || [];
+      const recent  = recList.map(a => ({
+        name:     a.name,
+        artist:   a.artist,
+        coverUrl: `${url}/rest/getCoverArt?id=${a.coverArt}&size=80&${auth}`,
+        navUrl:   url,
+      }));
+
+      broadcast("navidrome", { nowPlaying, recent });
+    } catch (e) {
+      console.error("[navidrome]", e.message);
+      broadcast("navidrome", { error: e.message });
+    }
+  }
+
+  fetchNavidrome();
+  setInterval(fetchNavidrome, 30_000);
 
   app.get("/api/navidrome", async (req, res) => {
     try {

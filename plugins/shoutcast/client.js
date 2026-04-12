@@ -1,4 +1,3 @@
-// SHOUTcast plugin — keeps a single Audio element alive across refreshes
 (function () {
   let _audio    = null;
   let _playing  = false;
@@ -16,13 +15,12 @@
     return _audio;
   }
 
-  // Define this clearly so it's accessible to the render function
   const handlePlayPause = (streamUrl) => {
     const audio = getAudio(streamUrl);
     if (_playing) {
       audio.pause();
       audio.currentTime = 0;
-      audio.src = streamUrl; // The "Stop" trick
+      audio.src = streamUrl;
       _playing = false;
     } else {
       audio.play().catch((err) => console.error("Playback failed:", err));
@@ -31,7 +29,7 @@
   };
 
   MyGlance.registerWidget("shoutcast", {
-    refresh: 10_000,
+    refresh: 0,
     css: `
       .sc-now-playing{background:var(--surface2);border-radius:6px;padding:12px;margin-bottom:12px;}
       .sc-station-name{font-size:10px;font-family:var(--mono);text-transform:uppercase;letter-spacing:.12em;color:var(--muted);margin-bottom:8px;display:flex;align-items:center;gap:6px;}
@@ -55,6 +53,7 @@
       .sc-history-item:last-child{border-bottom:none;}
       .sc-history-num{font-size:9px;color:var(--muted);font-family:var(--mono);width:14px;text-align:right;flex-shrink:0;}
       .sc-history-title{font-size:12px;color:var(--text);flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+      .sc-history-time{font-size:9px;color:var(--muted);font-family:var(--mono);flex-shrink:0;}
     `,
     render(container, data) {
       const body = MyGlance.ensureCard(container, "📻 Radio");
@@ -78,9 +77,10 @@
         ? `<div class="sc-history-label">Recent Tracks</div>
            <div class="sc-history-list">${data.history.map((t, i) =>
              `<div class="sc-history-item">
-               <span class="sc-history-num">${i + 1}</span>
-               <span class="sc-history-title">${t.title}</span>
-             </div>`).join("")}</div>`
+                <span class="sc-history-num">${i + 1}</span>
+                <span class="sc-history-title">${t.artist ? `${t.artist} - ${t.title}` : t.title}</span>
+                ${t.playedAt ? `<span class="sc-history-time">${t.playedAt}</span>` : ""}
+              </div>`).join("")}</div>`
         : "";
 
       MyGlance.patch(body, `
@@ -107,10 +107,9 @@
         </div>
         ${historyHTML}`);
 
-      // FIXED: Removed 'this.' and called handlePlayPause directly
       body.querySelector("[data-sc-play]").addEventListener("click", () => {
-        handlePlayPause(data.streamUrl); 
-        this.render(container, data); 
+        handlePlayPause(data.streamUrl);
+        this.render(container, data);
       });
 
       body.querySelector("[data-sc-vol]").addEventListener("input", e => {
@@ -118,5 +117,13 @@
       });
     },
     async fetch() { return window.fetch("/api/shoutcast").then(r => r.json()); },
+  });
+
+  MyGlance.onWsEvent("shoutcast", (data) => {
+    const def = MyGlance._widgets.shoutcast;
+    if (!def) return;
+    document.querySelectorAll(`[data-widget-type="shoutcast"]`).forEach(el => {
+      def.render.call(def, el, data);
+    });
   });
 })();

@@ -27,6 +27,16 @@ function checkSite(site) {
 }
 
 module.exports = function register(app, config) {
+  const broadcast = app.get("broadcast");
+
+  async function pollMonitor() {
+    const results = await Promise.all((config.monitor || []).map(site => checkSite(site)));
+    broadcast("monitor", results);
+  }
+
+  pollMonitor();
+  setInterval(pollMonitor, 30_000);
+
   app.get("/api/monitor", async (req, res) => {
     const results = await Promise.all((config.monitor || []).map(site => checkSite(site)));
     res.json(results);

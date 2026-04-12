@@ -1,5 +1,6 @@
 MyGlance.registerWidget("gitea-activity", {
-  refresh: 60_000,
+  refresh: 0,
+  _tab: "activity",
   css: `
     .git-tabs { display: flex; gap: 0; margin-bottom: 12px; border-bottom: 1px solid var(--border); }
     .git-tab { font-size: 10px; font-family: var(--mono); color: var(--muted); padding: 4px 10px; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; text-transform: uppercase; letter-spacing: .08em; transition: color .15s; }
@@ -21,7 +22,6 @@ MyGlance.registerWidget("gitea-activity", {
     .git-repo-stars { font-size: 10px; font-family: var(--mono); color: var(--muted); }
     .git-error { color: var(--red); font-size: 11px; }
   `,
-  _tab: "activity",
   render(container, data) {
     const body = MyGlance.ensureCard(container, "Gitea");
     if (!data) return;
@@ -73,4 +73,12 @@ MyGlance.registerWidget("gitea-activity", {
     });
   },
   async fetch() { return window.fetch("/api/gitea").then(r => r.json()); },
+});
+
+MyGlance.onWsEvent("gitea-activity", (data) => {
+  const def = MyGlance._widgets["gitea-activity"];
+  if (!def) return;
+  document.querySelectorAll(`[data-widget-type="gitea-activity"]`).forEach(el => {
+    def.render.call(def, el, data);
+  });
 });

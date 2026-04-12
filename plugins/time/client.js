@@ -1,9 +1,7 @@
-// Widget: time — no API needed, runs client-side every 10s
 MyGlance.registerWidget("time", {
-  refresh: 10_000,
+  refresh: 0,
   css: ``,
   render(container, data) {
-    // Build shell once
     if (!container.querySelector(".card")) {
       container.innerHTML = `<div class="card">
         <div class="card-body text-center py-4">
@@ -13,14 +11,18 @@ MyGlance.registerWidget("time", {
       </div>`;
     }
     if (!data) return;
-    // Patch only the two text nodes — no blink, no rebuild
     const tv = container.querySelector("[data-time]");
     const dv = container.querySelector("[data-date]");
     if (tv && tv.textContent !== data.time) tv.textContent = data.time;
     if (dv && dv.textContent !== data.date) dv.textContent = data.date;
   },
-  // fetch() returns data that is passed directly into render()
-  async fetch() {
-    return window.fetch("/api/time").then(r => r.json());
-  },
+  async fetch() { return window.fetch("/api/time").then(r => r.json()); },
+});
+
+MyGlance.onWsEvent("time", (data) => {
+  const def = MyGlance._widgets.time;
+  if (!def) return;
+  document.querySelectorAll(`[data-widget-type="time"]`).forEach(el => {
+    def.render.call(def, el, data);
+  });
 });

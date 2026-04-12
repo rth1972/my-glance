@@ -108,6 +108,8 @@ module.exports = {
     streamUrl:    "https://carreenradio.com:8840/;rain.mp3",
     name:         "Carreen Radio",
     historyCount: 8,
+    adminUser:    "admin",      // optional: needed for song history
+    adminPass:    "changemenot", // optional: needed for song history
   },
 
   // ── Navidrome ─────────────────────────────────────────────

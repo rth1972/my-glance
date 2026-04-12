@@ -1,5 +1,5 @@
 MyGlance.registerWidget("monitor", {
-  refresh: 30_000,
+  refresh: 0,
   css: `
     .monitor-list{display:flex;flex-direction:column;gap:6px;}
     .monitor-item{display:flex;align-items:center;justify-content:space-between;padding:8px 10px;background:var(--surface2);border-radius:4px;}
@@ -22,4 +22,12 @@ MyGlance.registerWidget("monitor", {
       </div>`).join("")}</div>`);
   },
   async fetch() { return window.fetch("/api/monitor").then(r => r.json()); },
+});
+
+MyGlance.onWsEvent("monitor", (data) => {
+  const def = MyGlance._widgets.monitor;
+  if (!def) return;
+  document.querySelectorAll(`[data-widget-type="monitor"]`).forEach(el => {
+    def.render.call(def, el, data);
+  });
 });

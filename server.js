@@ -1,17 +1,40 @@
 const express = require("express");
+const http    = require("http");
+const WebSocket = require("ws");
 const fs      = require("fs");
 const path    = require("path");
 const config  = require("./config");
 
-const app = express();
+const app    = express();
+const server  = http.createServer(app);
+const wss    = new WebSocket.Server({ server });
+
 app.use(express.static("public"));
 
+// ── WebSocket broadcasting ───────────────────────────────────────────────────
+const wsClients = new Set();
+
+wss.on("connection", (ws) => {
+  wsClients.add(ws);
+  ws.on("close", () => wsClients.delete(ws));
+  ws.on("error", () => wsClients.delete(ws));
+});
+
+function broadcast(event, data) {
+  const msg = JSON.stringify({ event, data, ts: Date.now() });
+  wsClients.forEach(ws => {
+    if (ws.readyState === WebSocket.OPEN) ws.send(msg);
+  });
+}
+
+// Make broadcast available to plugins
+app.set("broadcast", broadcast);
+
 // ── Auto-load plugins ─────────────────────────────────────────────────────────
-// Scans plugins/*/server.js + client.js and calls register(app, config) for each.
 const PLUGINS_DIR = path.join(__dirname, "plugins");
 
 const loadedPlugins = fs.readdirSync(PLUGINS_DIR)
-  .sort()                              // consistent order
+  .sort()
   .filter(name => {
     const dir = path.join(PLUGINS_DIR, name);
     return (
@@ -55,7 +78,8 @@ app.get("/api/pages", (req, res) => {
 });
 
 // ── Start ─────────────────────────────────────────────────────────────────────
-app.listen(config.port, () => {
+server.listen(config.port, () => {
   console.log(`\nmy-glance → http://localhost:${config.port}`);
-  console.log(`Loaded ${loadedPlugins.length} plugins: ${loadedPlugins.join(", ")}\n`);
+  console.log(`Loaded ${loadedPlugins.length} plugins: ${loadedPlugins.join(", ")}`);
+  console.log(`WebSocket  → ws://localhost:${config.port}/ws\n`);
 });

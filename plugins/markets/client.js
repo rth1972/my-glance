@@ -1,10 +1,4 @@
-// Markets plugin — drives the sticky ticker bar at the top of every page.
-// Unlike widget plugins this one mounts into #ticker-track, not a page column.
-MyGlance.registerMarkets({
-  refresh: 60_000,
-  async fetch() {
-    return window.fetch("/api/markets").then(r => r.json());
-  },
+const _def = {
   render(data) {
     const track = document.getElementById("ticker-track");
     if (!track) return;
@@ -28,4 +22,11 @@ MyGlance.registerMarkets({
     }).join('<span style="color:var(--border);padding:0 4px;user-select:none">│</span>');
     MyGlance.patch(track, html);
   },
+  async fetch() { return window.fetch("/api/markets").then(r => r.json()); },
+};
+
+MyGlance.registerMarkets(_def);
+
+MyGlance.onWsEvent("markets", (data) => {
+  _def.render(data);
 });

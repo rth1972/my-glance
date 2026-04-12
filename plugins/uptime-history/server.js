@@ -1,9 +1,9 @@
 const { execFile } = require("child_process");
 
-const INTERVAL_MS = 5 * 60 * 1000;  // poll every 5 minutes
-const MAX_SAMPLES = 288;             // 24h of 5-min samples
+const INTERVAL_MS = 5 * 60 * 1000;
+const MAX_SAMPLES = 288;
 
-const history = {};  // { [siteTitle]: [ { ts, ok, ms } ] }
+const history = {};
 
 function checkSite(site) {
   return new Promise(resolve => {
@@ -26,6 +26,7 @@ function checkSite(site) {
 }
 
 module.exports = function register(app, config) {
+  const broadcast = app.get("broadcast");
   const sites = config.monitor || [];
 
   async function poll() {
@@ -36,6 +37,17 @@ module.exports = function register(app, config) {
       buf.push({ ts: Date.now(), ok: result.ok, ms: result.ms });
       if (buf.length > MAX_SAMPLES) buf.splice(0, buf.length - MAX_SAMPLES);
     }
+
+    const payload = sites.map(site => {
+      const buf   = history[site.title] || [];
+      const total = buf.length;
+      const upBuf = buf.filter(s => s.ok);
+      const pct   = total ? Math.round((upBuf.length / total) * 100) : null;
+      const avgMs = upBuf.length ? Math.round(upBuf.reduce((a, b) => a + b.ms, 0) / upBuf.length) : 0;
+      const spark = buf.slice(-48).map(s => s.ok ? 1 : 0);
+      return { title: site.title, url: site.url, pct, avgMs, spark, samples: total };
+    });
+    broadcast("uptime-history", payload);
   }
 
   poll();

@@ -1,5 +1,5 @@
 MyGlance.registerWidget("uptime-history", {
-  refresh: 60_000,
+  refresh: 0,
   css: `
     .uh-list { display: flex; flex-direction: column; gap: 8px; }
     .uh-item { background: var(--surface2); border-radius: 4px; padding: 8px 10px; }
@@ -57,4 +57,12 @@ MyGlance.registerWidget("uptime-history", {
     MyGlance.patch(body, `<div class="uh-list">${rows}</div>`);
   },
   async fetch() { return window.fetch("/api/uptime-history").then(r => r.json()); },
+});
+
+MyGlance.onWsEvent("uptime-history", (data) => {
+  const def = MyGlance._widgets["uptime-history"];
+  if (!def) return;
+  document.querySelectorAll(`[data-widget-type="uptime-history"]`).forEach(el => {
+    def.render.call(def, el, data);
+  });
 });
