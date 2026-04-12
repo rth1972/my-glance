@@ -4,15 +4,31 @@
   let _playing  = false;
 
   function getAudio(streamUrl) {
-    if (!_audio) { _audio = new Audio(); _audio.volume = 0.8; }
+    if (!_audio) {
+      _audio = new Audio();
+      _audio.volume = 0.8;
+    }
     if (_audio.src !== streamUrl) {
-      const was = _playing;
       _audio.pause();
       _audio.src = streamUrl;
-      if (was) _audio.play().catch(() => {});
+      _audio.load();
     }
     return _audio;
   }
+
+  // Define this clearly so it's accessible to the render function
+  const handlePlayPause = (streamUrl) => {
+    const audio = getAudio(streamUrl);
+    if (_playing) {
+      audio.pause();
+      audio.currentTime = 0;
+      audio.src = streamUrl; // The "Stop" trick
+      _playing = false;
+    } else {
+      audio.play().catch((err) => console.error("Playback failed:", err));
+      _playing = true;
+    }
+  };
 
   MyGlance.registerWidget("shoutcast", {
     refresh: 10_000,
@@ -21,7 +37,7 @@
       .sc-station-name{font-size:10px;font-family:var(--mono);text-transform:uppercase;letter-spacing:.12em;color:var(--muted);margin-bottom:8px;display:flex;align-items:center;gap:6px;}
       .sc-live-dot{width:6px;height:6px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green);flex-shrink:0;animation:pulse 1.5s ease-in-out infinite;}
       .sc-live-dot.off{background:var(--muted);box-shadow:none;animation:none;}
-      .sc-song-title{font-size:14px;font-weight:600;color:var(--text);line-height:1.3;margin-bottom:4px;word-break:break-word;}
+      .sc-song-title{font-size:12px;font-weight:600;color:var(--text);line-height:1.3;margin-bottom:4px;word-break:break-word;}
       .sc-artist{font-size:11px;color:var(--muted);font-family:var(--mono);margin-bottom:8px;}
       .sc-meta-row{display:flex;gap:12px;font-size:10px;color:var(--muted);font-family:var(--mono);flex-wrap:wrap;margin-bottom:12px;}
       .sc-meta-val{color:var(--text);}
@@ -47,7 +63,6 @@
       const np    = data.nowPlaying;
       const audio = getAudio(data.streamUrl);
 
-      // Split "Artist - Title" if present
       let songLine = np.title || "Unknown", artistLine = "";
       if (np.title && np.title.includes(" - ")) {
         const parts = np.title.split(" - ");
@@ -92,12 +107,12 @@
         </div>
         ${historyHTML}`);
 
-      // Re-attach listeners after patch
+      // FIXED: Removed 'this.' and called handlePlayPause directly
       body.querySelector("[data-sc-play]").addEventListener("click", () => {
-        if (_playing) { audio.pause(); _playing = false; }
-        else          { audio.play().catch(() => {}); _playing = true; }
-        this.render(container, data); // flip icon only
+        handlePlayPause(data.streamUrl); 
+        this.render(container, data); 
       });
+
       body.querySelector("[data-sc-vol]").addEventListener("input", e => {
         audio.volume = parseFloat(e.target.value);
       });

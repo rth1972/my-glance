@@ -34,7 +34,7 @@ module.exports = {
         {
           size: "full",
           widgets: [
-            { type: "monitor" },
+            { type: "proxmox" },
             { type: "feeds" },
           ],
         },
@@ -48,28 +48,27 @@ module.exports = {
       ],
     },
 
-    // ── Page 2: Studio ────────────────────────────────────────
+    // ── Page 2: Infrastructure ────────────────────────────────
     {
-      name: "Random",
+      name: "Infra",
       columns: [
         {
           size: "small",
           widgets: [
-            //{ type: "shoutcast" },   // radio station — now playing + player
-            //{ type: "navidrome" },   // now playing + recently played
-            { type: "wallpaper" },   // Bing wallpaper of the day
+            { type: "proxmox" },
           ],
         },
         {
           size: "full",
           widgets: [
-            { type: "techfeeds" },   // tech/self-hosted RSS feeds
+            { type: "uptime-history" },
+            { type: "gitea-activity" },
           ],
         },
         {
           size: "small",
           widgets: [
-            { type: "notes" },       // quick links / notes
+            { type: "notes" },
           ],
         },
       ],
@@ -97,23 +96,17 @@ module.exports = {
   ],
   feedsLimit: 30,
 
-  // ── Tech Feeds (Studio page) ──────────────────────────────
+  // ── Tech Feeds ────────────────────────────────────────────
   techFeeds: [
-    { url: "https://blog.robintehofstee.com/rss.xml", title: "Personal Blog"  },
+    { url: "https://blog.robintehofstee.com/rss.xml", title: "Personal Blog" },
   ],
   techFeedsLimit: 20,
 
   // ── SHOUTcast ─────────────────────────────────────────────
-  // The widget fetches stats via the backend to avoid CORS issues.
-  // streamUrl is what the audio player actually plays in the browser.
   shoutcast: {
-    // Internal URL used by the server to fetch stats (can be local IP)
-    statsUrl:   "https://carreenradio.com:8840",
-    // Stream URL the browser will play — must be reachable from the user's browser
-    streamUrl:  "https://carreenradio.com:8840/stream",
-    // Station display name
-    name:       "Carreen Radio",
-    // How many recent tracks to show
+    statsUrl:     "http://192.168.1.100:8050",
+    streamUrl:    "https://carreenradio.com:8840/;rain.mp3",
+    name:         "Carreen Radio",
     historyCount: 8,
   },
 
@@ -125,7 +118,7 @@ module.exports = {
     recentCount: 6,
   },
 
-  // ── Notes / Quick Links (Studio page) ────────────────────
+  // ── Notes / Quick Links ───────────────────────────────────
   notes: [
     {
       group: "Quick Links",
@@ -156,6 +149,25 @@ module.exports = {
     { title: "Navidrome",           url: "http://192.168.1.75:4533"   },
     { title: "Termix",              url: "http://192.168.1.24/"       },
   ],
+
+  // ── Proxmox ───────────────────────────────────────────────
+  // Create an API token: Datacenter → Permissions → API Tokens → Add
+  // Assign PVEAuditor role (read-only is enough)
+  // tokenid format: "user@realm!tokenname" e.g. "root@pam!my-glance"
+  proxmox: {
+    url:     "https://192.168.1.27:8006",
+    tokenid: "root@pam!my-glance",
+    secret:  "660441ba-acba-4383-8398-4163b7cfe9ed",
+    node:    "rth",
+  },
+
+  // ── Gitea ─────────────────────────────────────────────────
+  // Create a token: Gitea → Settings → Applications → Generate Token
+  gitea: {
+    url:   "http://192.168.1.83:3000",
+    user:  "robin30",
+    token: "4df28ff4d8bef0cfea3bf95a08401ad1f0280cc8",
+  },
 
   // ── Bookmarks (Home page) ─────────────────────────────────
   bookmarks: [

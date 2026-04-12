@@ -1,12 +1,11 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="light">
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>my-glance</title>
+  <title>Dashboard</title>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&display=swap"
-    rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap"/>
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
@@ -19,7 +18,7 @@
             accent:'#4f8ef7',ok:'#3ecf8e',danger:'#f7604f',
           },
           fontFamily: {
-            mono: ['"JetBrains Mono"', 'monospace'],
+            mono:['"JetBrains Mono"','monospace'],
             sans:['"IBM Plex Sans"','sans-serif'],
           },
         },
@@ -27,13 +26,27 @@
     }
   </script>
   <style>
+    /* ── DARK THEME (default) ── */
     :root {
       --bg:#0d0f13;--surface:#13161c;--surface2:#1a1e27;
       --border:#252a36;--text:#c8cdd8;--muted:#5a6070;
       --accent:#4f8ef7;--green:#3ecf8e;--red:#f7604f;
-      --mono:'JetBrain Mono',monospace;--sans:'IBM Plex Sans',sans-serif;
+      --mono:'JetBrains Mono',monospace;--sans:'IBM Plex Sans',sans-serif;
     }
-    html,body{background:var(--bg);color:var(--text);font-family:var(--mono);font-size:14px;line-height:1.5;}
+
+    /* ── LIGHT THEME ── */
+    html.light {
+      --bg:#f0f2f5;--surface:#ffffff;--surface2:#e8eaed;
+      --border:#d1d5db;--text:#1f2937;--muted:#6b7280;
+      --accent:#2563eb;--green:#059669;--red:#dc2626;
+    }
+
+    /* CSS variables own all backgrounds — !important beats Tailwind utility classes */
+    html, body      { background: var(--bg) !important; color: var(--text) !important; }
+    #ticker         { background: var(--surface) !important; }
+    #nav            { background: var(--bg) !important; }
+
+    html,body{font-family:var(--mono);font-size:14px;line-height:1.5;transition:background .2s,color .2s;}
 
     /* ── APP LOADER ── */
     #app-loader{position:fixed;inset:0;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#000;transition:opacity 1s ease-in-out;}
@@ -63,7 +76,7 @@
     .up{color:var(--green);}.down{color:var(--red);}
 
     /* ── CARD ── */
-    .card{background:var(--surface);border:1px solid var(--border);border-radius:6px;overflow:hidden;}
+    .card{background:var(--surface);border:1px solid var(--border);border-radius:6px;overflow:hidden;transition:background .2s,border-color .2s;}
     .card-header{padding:10px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
     .card-title{font-size:10px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-family:var(--mono);}
     .card-body{padding:14px;}
@@ -76,9 +89,16 @@
     ::-webkit-scrollbar-track{background:transparent;}
     ::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
     .nav-btn.active{color:var(--text);background:var(--surface2);border:1px solid var(--border);}
+
+    /* ── BORDER COLOR ── */
+    #ticker, #nav { border-color: var(--border) !important; }
+
+    /* ── THEME TOGGLE ── */
+    #theme-toggle{margin-left:auto;padding:3px 10px;border-radius:4px;border:1px solid var(--border);background:var(--surface2);color:var(--muted);font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.08em;cursor:pointer;transition:color .15s,background .15s,border-color .15s;user-select:none;}
+    #theme-toggle:hover{color:var(--text);}
   </style>
 </head>
-<body class="bg-bg text-text font-mono min-h-screen">
+<body class="font-mono min-h-screen">
 
   <!-- ══ APP LOADER ══ -->
   <div id="app-loader">
@@ -97,20 +117,45 @@
 
   <!-- ══ APP CONTENT ══ -->
   <div id="app-content">
-    <div id="ticker" class="sticky top-0 z-50 flex items-center h-[38px] bg-surface border-b border-border overflow-hidden">
+    <div id="ticker" class="sticky top-0 z-50 flex items-center h-[38px] border-b overflow-hidden">
       <div id="ticker-label" class="shrink-0 px-3 md:px-4 h-full flex items-center font-mono text-[10px] uppercase tracking-widest text-muted border-r border-border">Markets</div>
       <div id="ticker-track" class="flex items-center gap-6 md:gap-8 px-4 md:px-6 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         <span class="loading pulse">loading…</span>
       </div>
     </div>
-    <nav id="nav" class="sticky top-[38px] z-40 flex items-center h-[42px] bg-bg border-b border-border px-3 md:px-4 gap-1">
+    <nav id="nav" class="sticky top-[38px] z-40 flex items-center h-[42px] border-b px-3 md:px-4 gap-1">
       <span class="font-mono text-xs font-medium text-accent tracking-wide mr-3 md:mr-4 shrink-0 uppercase">Dashboard</span>
       <div id="nav-tabs" class="flex items-center gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"></div>
+      <button id="theme-toggle" title="Toggle light/dark mode">☀ Light</button>
     </nav>
     <div id="pages-root" class="mb-24"></div>
   </div>
 
   <script>
+  // ══ THEME ════════════════════════════════════════════════════════════════════
+  (function () {
+    const saved = localStorage.getItem('theme');
+    if (saved === 'light') document.documentElement.classList.add('light');
+
+    function applyTheme(isLight) {
+      document.documentElement.classList.toggle('light', isLight);
+      localStorage.setItem('theme', isLight ? 'light' : 'dark');
+      const btn = document.getElementById('theme-toggle');
+      if (btn) btn.textContent = isLight ? '☾ Dark' : '☀ Light';
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      const isLight = document.documentElement.classList.contains('light');
+      const btn = document.getElementById('theme-toggle');
+      if (btn) {
+        btn.textContent = isLight ? '☾ Dark' : '☀ Light';
+        btn.addEventListener('click', () => {
+          applyTheme(!document.documentElement.classList.contains('light'));
+        });
+      }
+    });
+  })();
+
   // ══ APP LOADER ══════════════════════════════════════════════════════════════
   (function(){
     const loader=document.getElementById('app-loader'),content=document.getElementById('app-content'),
@@ -126,44 +171,50 @@
   })();
 
   // ══ MyGlance — plugin host ═══════════════════════════════════════════════════
-  // This is the global API that every plugin's client.js talks to.
   const MyGlance = (() => {
-    const _widgets   = {};   // name → widget definition
-    const _timers    = {};   // name → setInterval id
+    const _widgets    = {};
     const _stylesDone = new Set();
+    let   _marketsDef = null;
+    let   _marketsTimer = null;
 
     return {
-      // Called by each plugin's client.js to self-register
       registerWidget(name, def) {
         _widgets[name] = def;
-
-        // Inject the plugin's CSS once
         if (def.css && !_stylesDone.has(name)) {
-          const style = document.createElement("style");
-          style.textContent = def.css;
-          document.head.appendChild(style);
+          const s = document.createElement("style");
+          s.textContent = def.css;
+          document.head.appendChild(s);
           _stylesDone.add(name);
         }
       },
 
-      // Mount a widget into a container element and set up its refresh timer
+      registerMarkets(def) {
+        _marketsDef = def;
+      },
+
+      async startMarkets() {
+        if (!_marketsDef) return;
+        const run = async () => {
+          const data = await _marketsDef.fetch().catch(() => null);
+          _marketsDef.render(data);
+        };
+        await run();
+        if (_marketsTimer) clearInterval(_marketsTimer);
+        _marketsTimer = setInterval(run, _marketsDef.refresh || 60_000);
+      },
+
       async mount(name, container) {
         const def = _widgets[name];
         if (!def) {
           container.innerHTML = `<div class="card"><div class="card-body"><span class="loading">Unknown widget: ${name}</span></div></div>`;
           return;
         }
-
-        // Initial fetch + render
         const data = await def.fetch().catch(() => null);
         def.render.call(def, container, data);
 
-        // Auto-refresh
         if (def.refresh > 0) {
-          if (_timers[name]) clearInterval(_timers[name]);
-          _timers[name] = setInterval(async () => {
+          setInterval(async () => {
             const d = await def.fetch().catch(() => null);
-            // Re-render all mounted instances of this widget
             document.querySelectorAll(`[data-widget-type="${name}"]`).forEach(el => {
               def.render.call(def, el, d);
             });
@@ -171,12 +222,14 @@
         }
       },
 
-      // ── Shared helpers available to all plugins ──
       ensureCard(container, title) {
-        let body = container.querySelector('.card-body');
+        let body = container.querySelector(".card-body");
         if (!body) {
-          container.innerHTML = `<div class="card"><div class="card-header"><span class="card-title">${title}</span></div><div class="card-body"><span class="loading pulse">loading…</span></div></div>`;
-          body = container.querySelector('.card-body');
+          container.innerHTML = `<div class="card">
+            <div class="card-header"><span class="card-title">${title}</span></div>
+            <div class="card-body"><span class="loading pulse">loading…</span></div>
+          </div>`;
+          body = container.querySelector(".card-body");
         }
         return body;
       },
@@ -196,28 +249,33 @@
     };
   })();
 
-  // ══ Load plugin scripts dynamically ═════════════════════════════════════════
+  // ══ Dynamic script loader ════════════════════════════════════════════════════
   function loadScript(src) {
-    return new Promise((resolve, reject) => {
+    return new Promise(resolve => {
       const s = document.createElement("script");
-      s.src = src;
+      s.src     = src;
       s.onload  = resolve;
-      s.onerror = () => { console.warn(`Plugin failed to load: ${src}`); resolve(); /* non-fatal */ };
+      s.onerror = () => { console.warn(`Plugin failed to load: ${src}`); resolve(); };
       document.head.appendChild(s);
     });
   }
 
   // ══ Page builder ════════════════════════════════════════════════════════════
   const $ = id => document.getElementById(id);
-  const el = (tag, cls, html="") => { const e=document.createElement(tag); if(cls)e.className=cls; e.innerHTML=html; return e; };
+  const el = (tag, cls, html="") => {
+    const e = document.createElement(tag);
+    if (cls) e.className = cls;
+    e.innerHTML = html;
+    return e;
+  };
 
   async function buildPage(page) {
-    const pageEl = el("div", "page hidden");
-    const isSlim = page.columns.length === 1 && page.columns[0].size === "full";
+    const pageEl  = el("div", "page hidden");
+    const isSlim  = page.columns.length === 1 && page.columns[0].size === "full";
     pageEl.classList.add("px-3","py-3","md:px-4","md:py-4","mx-auto","max-w-[1600px]");
     const numCols = page.columns.length;
-    const grid = el("div","");
-    if      (isSlim)       grid.className = "max-w-lg mx-auto mt-8 md:mt-12 flex flex-col gap-4";
+    const grid    = el("div","");
+    if      (isSlim)        grid.className = "max-w-lg mx-auto mt-8 md:mt-12 flex flex-col gap-4";
     else if (numCols === 1) grid.className = "flex flex-col gap-4";
     else if (numCols === 2) grid.className = "flex flex-col md:flex-row gap-4 items-start";
     else                    grid.className = "flex flex-col md:grid md:grid-cols-2 lg:grid lg:grid-cols-[280px_1fr_280px] gap-4 items-start";
@@ -226,7 +284,6 @@
       const colEl = el("div","flex flex-col gap-4 min-w-0");
       if (!isSlim && numCols === 3 && col.size === "full") colEl.classList.add("md:col-span-2","lg:col-span-1");
       if (!isSlim && numCols === 2) col.size === "small" ? colEl.classList.add("md:w-[280px]","shrink-0") : colEl.classList.add("flex-1");
-
       for (const widgetType of col.widgets) {
         const wEl = el("div","");
         wEl.dataset.widgetType = widgetType;
@@ -239,47 +296,24 @@
     return pageEl;
   }
 
-  // ══ Markets (built-in — not a plugin) ═══════════════════════════════════════
-  async function loadMarkets() {
-    try {
-      const data = await fetch("/api/markets").then(r => r.json());
-      if (!Array.isArray(data)) throw new Error();
-      const html = data.map(m => {
-        const chg   = parseFloat(m.change) || 0;
-        const dir   = chg >= 0 ? "up" : "down";
-        const sign  = chg >= 0 ? "+" : "";
-        const raw   = typeof m.price === "string" ? parseFloat(m.price) : m.price;
-        const price = raw != null ? raw.toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2}) : "—";
-        return `<div class="flex items-center gap-2 whitespace-nowrap shrink-0">
-          <span class="ticker-name">${m.name}</span>
-          <span class="ticker-price ${dir}">$${price}</span>
-          <span class="ticker-change ${dir}">${sign}${chg.toFixed(2)}%</span>
-        </div>`;
-      }).join('<span style="color:var(--border);padding:0 4px;user-select:none">│</span>');
-      MyGlance.patch($("ticker-track"), html);
-    } catch {
-      MyGlance.patch($("ticker-track"), `<span style="color:var(--red);font-size:11px">Markets unavailable</span>`);
-    }
-  }
-
   // ══ Nav ══════════════════════════════════════════════════════════════════════
   let currentPage = 0;
   function switchPage(idx) {
-    document.querySelectorAll(".page").forEach((p,i) => { p.classList.toggle("hidden",i!==idx); p.classList.toggle("block",i===idx); });
-    document.querySelectorAll(".nav-btn").forEach((b,i) => b.classList.toggle("active",i===idx));
+    document.querySelectorAll(".page").forEach((p,i) => {
+      p.classList.toggle("hidden", i !== idx);
+      p.classList.toggle("block",  i === idx);
+    });
+    document.querySelectorAll(".nav-btn").forEach((b,i) => b.classList.toggle("active", i === idx));
     currentPage = idx;
   }
 
   // ══ Boot ═════════════════════════════════════════════════════════════════════
   (async () => {
-    // 1. Ask server which plugins are available
     const pluginNames = await fetch("/api/plugins").then(r => r.json());
-
-    // 2. Load each plugin's client.js in parallel
     await Promise.all(pluginNames.map(name => loadScript(`/plugins/${name}/client.js`)));
     console.log(`Plugins ready: ${pluginNames.join(", ")}`);
+    await MyGlance.startMarkets();
 
-    // 3. Fetch page layout and build the UI
     const pages = await fetch("/api/pages").then(r => r.json());
     const root  = $("pages-root");
     const tabs  = $("nav-tabs");
@@ -294,10 +328,6 @@
     }
 
     switchPage(0);
-
-    // 4. Start the ticker
-    loadMarkets();
-    setInterval(loadMarkets, 60_000);
   })();
   </script>
 </body>
