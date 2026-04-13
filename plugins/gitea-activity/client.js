@@ -1,6 +1,6 @@
 MyGlance.registerWidget("gitea-activity", {
   refresh: 0,
-  _tab: "activity",
+  _tab: "repos",
   css: `
     .git-tabs { display: flex; gap: 0; margin-bottom: 12px; border-bottom: 1px solid var(--border); }
     .git-tab { font-size: 10px; font-family: var(--mono); color: var(--muted); padding: 4px 10px; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; text-transform: uppercase; letter-spacing: .08em; transition: color .15s; }

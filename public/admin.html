@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en" class="light">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Dashboard Admin</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@100..800&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            bg:'#0d0f13',surface:'#13161c',surface2:'#1a1e27',
+            border:'#252a36',text:'#c8cdd8',muted:'#5a6070',
+            accent:'#4f8ef7',ok:'#3ecf8e',danger:'#f7604f',
+          },
+          fontFamily: {
+            mono:['"JetBrains Mono"',monospace],
+            sans:['"IBM Plex Sans"',sans-serif],
+          },
+        },
+      },
+    }
+  </script>
+  <style>
+    :root {
+      --bg:#0d0f13;--surface:#13161c;--surface2:#1a1e27;
+      --border:#252a36;--text:#c8cdd8;--muted:#5a6070;
+      --accent:#4f8ef7;--green:#3ecf8e;--red:#f7604f;
+      --mono:'JetBrains Mono',monospace;--sans:'IBM Plex Sans',sans-serif;
+    }
+    html.light {
+      --bg:#f0f2f5;--surface:#ffffff;--surface2:#e8eaed;
+      --border:#d1d5db;--text:#1f2937;--muted:#6b7280;
+      --accent:#2563eb;--green:#059669;--red:#dc2626;
+    }
+    html, body { background: var(--bg) !important; color: var(--text) !important; }
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
+    .card-header { padding: 10px 14px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+    .card-title { font-size: 10px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); font-family: var(--mono); }
+    .card-body { padding: 14px; }
+    html,body{font-family:var(--mono);font-size:14px;line-height:1.5;transition:background .2s,color .2s;}
+    .nav-btn{padding:6px 12px;border-radius:4px;font-family:var(--mono);font-size:11px;text-transform:uppercase;letter-spacing:.08em;cursor:pointer;border:1px solid transparent;background:transparent;color:var(--muted);transition:all .15s;}
+    .nav-btn:hover{color:var(--text);background:var(--surface2);}
+    .nav-btn.active{color:var(--text);background:var(--surface2);border:1px solid var(--border);}
+    .toggle{width:44px;height:24px;background:var(--surface2);border-radius:12px;cursor:pointer;position:relative;transition:background .2s;border:1px solid var(--border);}
+    .toggle.on{background:var(--ok);border-color:var(--ok);}
+    .toggle::after{content:'';position:absolute;top:2px;left:2px;width:18px;height:18px;background:#fff;border-radius:50%;transition:transform .2s;}
+    .toggle.on::after{transform:translateX(20px);}
+    .plugin-item{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid var(--border);transition:background .15s;}
+    .plugin-item:last-child{border-bottom:none;}
+    .plugin-item:hover{background:var(--surface2);}
+    .plugin-name{font-size:13px;color:var(--text);}
+    .plugin-status{font-size:10px;font-family:var(--mono);padding:2px 8px;border-radius:3px;}
+    .plugin-status.enabled{background:rgba(62,207,142,.15);color:var(--ok);}
+    .plugin-status.disabled{background:rgba(90,96,112,.15);color:var(--muted);}
+    .drag-handle{cursor:grab;padding:4px;color:var(--muted);transition:color .15s;}
+    .drag-handle:hover{color:var(--text);}
+    .drag-handle:active{cursor:grabbing;}
+    .page-card{background:var(--surface);border:1px solid var(--border);border-radius:6px;margin-bottom:12px;}
+    .page-header{padding:10px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;}
+    .page-name{font-size:12px;font-weight:500;color:var(--text);flex:1;}
+    .widget-chip{display:inline-flex;align-items:center;gap:4px;padding:4px 8px;background:var(--surface2);border-radius:4px;font-size:11px;color:var(--text);border:1px solid var(--border);}
+    .widget-chip .remove{color:var(--muted);cursor:pointer;font-size:10px;padding:2px;}
+    .widget-chip .remove:hover{color:var(--red);}
+    .widget-size{font-size:9px;padding:2px 6px;border-radius:3px;cursor:pointer;border:1px solid var(--border);background:var(--surface2);color:var(--muted);}
+    .widget-size:hover,.widget-size.active{background:var(--accent);color:#fff;border-color:var(--accent);}
+    .add-widget-btn{padding:4px 8px;background:var(--accent);color:#fff;border-radius:4px;font-size:11px;cursor:pointer;border:none;}
+    .add-widget-btn:hover{opacity:0.9;}
+    .pos-btn{font-size:9px;padding:2px 6px;border-radius:3px;cursor:pointer;border:1px solid var(--border);background:var(--surface2);color:var(--muted);}
+    .pos-btn:hover,.pos-btn.active{background:var(--accent);color:#fff;border-color:var(--accent);}
+    #theme-toggle{padding:3px 10px;border-radius:4px;border:1px solid var(--border);background:var(--surface2);color:var(--muted);font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.08em;cursor:pointer;transition:color .15s,background .15s;}
+    #theme-toggle:hover{color:var(--text);}
+    .tab-btn{padding:8px 16px;font-size:11px;text-transform:uppercase;letter-spacing:.08em;border-bottom:2px solid transparent;color:var(--muted);cursor:pointer;transition:all .15s;background:none;border-left:none;border-right:none;border-top:none;}
+    .tab-btn:hover{color:var(--text);}
+    .tab-btn.active{color:var(--accent);border-bottom-color:var(--accent);}
+    ::-webkit-scrollbar{width:4px;}
+    ::-webkit-scrollbar-track{background:transparent;}
+    ::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
+  </style>
+</head>
+<body class="font-mono min-h-screen">
+
+  <nav class="sticky top-0 z-40 flex items-center h-[42px] border-b px-4 gap-1" style="background:var(--bg);border-color:var(--border)">
+    <span class="font-mono text-xs font-medium text-accent tracking-wide mr-4 shrink-0 uppercase">Admin</span>
+    <button class="tab-btn active" data-tab="plugins">Plugins</button>
+    <button class="tab-btn" data-tab="pages">Pages</button>
+    <div class="flex-1"></div>
+    <button id="theme-toggle" title="Toggle light/dark mode">☀ Light</button>
+  </nav>
+
+  <div class="p-4 md:p-6 mx-auto max-w-4xl">
+    
+    <!-- Plugins Tab -->
+    <div id="tab-plugins">
+      <div class="card mb-6">
+        <div class="card-header">
+          <span class="card-title">Plugin Manager</span>
+          <span id="plugin-count" class="text-xs" style="color:var(--muted)"></span>
+        </div>
+        <div class="card-body p-0">
+          <div id="plugins-list"></div>
+        </div>
+      </div>
+      <div class="text-center text-xs" style="color:var(--muted)">
+        Drag to reorder plugins. Order affects widget priority.
+      </div>
+    </div>
+
+    <!-- Pages Tab -->
+    <div id="tab-pages" class="hidden">
+      <div class="flex justify-between items-center mb-4">
+        <h2 class="text-lg font-medium">Pages</h2>
+        <button id="add-page-btn" class="add-widget-btn">+ Add Page</button>
+      </div>
+      <div id="pages-list"></div>
+    </div>
+
+  </div>
+
+  <!-- Add Page Modal -->
+  <div id="add-page-modal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center hidden">
+    <div class="bg-[var(--surface)] border border-[var(--border)] rounded-lg p-5 min-w-[300px]">
+      <h3 class="text-sm font-medium mb-4" style="color:var(--text)">Add New Page</h3>
+      <input type="text" id="new-page-name" placeholder="Page name (e.g. Work)" class="w-full p-2 bg-[var(--surface2)] border border-[var(--border)] rounded text-[var(--text)] mb-4"/>
+      <div class="flex gap-2 justify-end">
+        <button id="cancel-page" class="nav-btn" style="border:1px solid var(--border)">Cancel</button>
+        <button id="confirm-add-page" class="add-widget-btn">Add</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add Widget Modal -->
+  <div id="add-widget-modal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center hidden">
+    <div class="bg-[var(--surface)] border border-[var(--border)] rounded-lg p-5 min-w-[300px] max-w-[90vw]">
+      <h3 class="text-sm font-medium mb-4" style="color:var(--text)">Add Widget to <span id="widget-target-page"></span></h3>
+      <div id="available-widgets" class="mb-4 max-h-60 overflow-y-auto"></div>
+      <div class="flex justify-end">
+        <button id="cancel-widget" class="nav-btn" style="border:1px solid var(--border)">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      const saved = localStorage.getItem('theme');
+      if (saved === 'light') document.documentElement.classList.add('light');
+      function applyTheme(isLight) {
+        document.documentElement.classList.toggle('light', isLight);
+        localStorage.setItem('theme', isLight ? 'light' : 'dark');
+        const btn = document.getElementById('theme-toggle');
+        if (btn) btn.textContent = isLight ? '☾ Dark' : '☀ Light';
+      }
+      document.addEventListener('DOMContentLoaded', () => {
+        const isLight = document.documentElement.classList.contains('light');
+        const btn = document.getElementById('theme-toggle');
+        if (btn) {
+          btn.textContent = isLight ? '☾ Dark' : '☀ Light';
+          btn.addEventListener('click', () => applyTheme(!isLight));
+        }
+      });
+    })();
+
+    // State
+    let plugins = [];
+    let pages = [];
+
+    // Tabs
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById('tab-plugins').classList.toggle('hidden', btn.dataset.tab !== 'plugins');
+        document.getElementById('tab-pages').classList.toggle('hidden', btn.dataset.tab !== 'pages');
+      });
+    });
+
+    // Load plugins
+    async function loadPlugins() {
+      const res = await fetch('/api/plugins/all');
+      plugins = await res.json();
+      renderPlugins();
+    }
+
+    function renderPlugins() {
+      const list = document.getElementById('plugins-list');
+      const enabled = plugins.filter(p => p.enabled).length;
+      document.getElementById('plugin-count').textContent = `${enabled}/${plugins.length} enabled`;
+
+      list.innerHTML = plugins.map((p, i) => `
+        <div class="plugin-item" draggable="true" data-name="${p.name}" data-index="${i}">
+          <div class="flex items-center gap-3">
+            <span class="drag-handle">⋮⋮</span>
+            <span class="plugin-name">${p.name}</span>
+            <span class="plugin-status ${p.enabled ? 'enabled' : 'disabled'}">${p.enabled ? 'enabled' : 'disabled'}</span>
+          </div>
+          <div class="toggle ${p.enabled ? 'on' : ''}" data-plugin="${p.name}"></div>
+        </div>
+      `).join('');
+
+      // Drag events
+      list.querySelectorAll('.plugin-item').forEach(item => {
+        item.addEventListener('dragstart', e => {
+          item.dataset.dragging = 'true';
+          e.dataTransfer.effectAllowed = 'move';
+        });
+        item.addEventListener('dragend', () => {
+          delete item.dataset.dragging;
+        });
+        item.addEventListener('dragover', e => {
+          e.preventDefault();
+          if (!item.dataset.dragging) item.style.borderTop = '2px solid var(--accent)';
+        });
+        item.addEventListener('dragleave', () => {
+          item.style.borderTop = '';
+        });
+        item.addEventListener('drop', e => {
+          e.preventDefault();
+          item.style.borderTop = '';
+          const fromIdx = parseInt(document.querySelector('[data-dragging]')?.dataset.index);
+          const toIdx = parseInt(item.dataset.index);
+          if (!isNaN(fromIdx) && fromIdx !== toIdx) {
+            const [moved] = plugins.splice(fromIdx, 1);
+            plugins.splice(toIdx, 0, moved);
+            savePluginState();
+            renderPlugins();
+          }
+        });
+      });
+
+      // Toggle events
+      list.querySelectorAll('.toggle').forEach(toggle => {
+        toggle.addEventListener('click', () => {
+          const name = toggle.dataset.plugin;
+          const plugin = plugins.find(p => p.name === name);
+          if (plugin) {
+            plugin.enabled = !plugin.enabled;
+            savePluginState();
+            renderPlugins();
+          }
+        });
+      });
+    }
+
+    async function savePluginState() {
+      await fetch('/api/plugins/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ plugins })
+      });
+    }
+
+    // Load pages
+    async function loadPages() {
+      const res = await fetch('/api/pages/full');
+      pages = await res.json();
+      renderPages();
+    }
+
+    function renderPages() {
+      const list = document.getElementById('pages-list');
+      list.innerHTML = pages.map((page, pIdx) => `
+        <div class="page-card">
+          <div class="page-header">
+            <span class="page-name">${page.name}</span>
+            <span class="text-xs" style="color:var(--muted)">${(page.layout || []).length} widgets</span>
+            <button class="nav-btn" style="border:1px solid var(--border);padding:4px 8px;font-size:10px" onclick="deletePage(${pIdx})">Delete</button>
+          </div>
+          <div class="card-body">
+            ${(page.layout || []).length === 0 ? '<div style="color:var(--muted);font-size:12px">No widgets. Click "+ Widget" to add.</div>' : ''}
+            <div class="flex flex-wrap gap-2">
+              ${(page.layout || []).map((w, wIdx) => `
+                <div class="widget-chip" style="flex-direction:column;align-items:flex-start;gap:6px;padding:8px;">
+                  <div class="flex items-center gap-2">
+                    <span>${w.type}</span>
+                    <span class="remove" onclick="removeWidget(${pIdx}, ${wIdx})" style="cursor:pointer;color:var(--muted)">×</span>
+                  </div>
+                  <div class="flex gap-1">
+                    <button class="pos-btn ${w.position === 'left' ? 'active' : ''}" onclick="setPosition(${pIdx}, ${wIdx}, 'left')">Left</button>
+                    <button class="pos-btn ${w.position === 'full' ? 'active' : ''}" onclick="setPosition(${pIdx}, ${wIdx}, 'full')">Full</button>
+                    <button class="pos-btn ${w.position === 'right' ? 'active' : ''}" onclick="setPosition(${pIdx}, ${wIdx}, 'right')">Right</button>
+                  </div>
+                </div>
+              `).join('')}
+              <button class="add-widget-btn" onclick="showAddWidget(${pIdx})">+ Widget</button>
+            </div>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    // Add page modal
+    document.getElementById('add-page-btn').addEventListener('click', () => {
+      document.getElementById('add-page-modal').classList.remove('hidden');
+      document.getElementById('new-page-name').value = '';
+      document.getElementById('new-page-name').focus();
+    });
+
+    document.getElementById('cancel-page').addEventListener('click', () => {
+      document.getElementById('add-page-modal').classList.add('hidden');
+    });
+
+    document.getElementById('confirm-add-page').addEventListener('click', async () => {
+      const name = document.getElementById('new-page-name').value.trim();
+      if (name) {
+        pages.push({ name, layout: [] });
+        await savePages();
+        renderPages();
+        document.getElementById('add-page-modal').classList.add('hidden');
+      }
+    });
+
+    async function deletePage(idx) {
+      pages.splice(idx, 1);
+      await savePages();
+      renderPages();
+    }
+
+    async function setPosition(pIdx, wIdx, position) {
+      pages[pIdx].layout[wIdx].position = position;
+      await savePages();
+      renderPages();
+    }
+
+    // Add widget modal
+    let currentPageIdx;
+
+    function showAddWidget(pIdx) {
+      currentPageIdx = pIdx;
+      const currentWidgets = (pages[pIdx].layout || []).map(w => w.type);
+      const tickerWidgets = ['markets'];
+      const available = plugins.filter(p => p.enabled && !currentWidgets.includes(p.name) && !tickerWidgets.includes(p.name));
+      
+      document.getElementById('widget-target-page').textContent = pages[pIdx].name;
+      document.getElementById('available-widgets').innerHTML = available.length
+        ? available.map(p => `
+            <div class="p-2 rounded cursor-pointer hover:bg-[var(--surface2)]" style="color:var(--text)" onclick="addWidget('${p.name}')">${p.name}</div>
+          `).join('')
+        : '<div style="color:var(--muted)">All widgets added or no enabled widgets</div>';
+      
+      document.getElementById('add-widget-modal').classList.remove('hidden');
+    }
+
+    document.getElementById('cancel-widget').addEventListener('click', () => {
+      document.getElementById('add-widget-modal').classList.add('hidden');
+    });
+
+    async function addWidget(name) {
+      pages[currentPageIdx].layout.push({ type: name, position: 'full' });
+      await savePages();
+      renderPages();
+      document.getElementById('add-widget-modal').classList.add('hidden');
+    }
+
+    async function removeWidget(pIdx, wIdx) {
+      pages[pIdx].layout.splice(wIdx, 1);
+      await savePages();
+      renderPages();
+    }
+
+    async function savePages() {
+      await fetch('/api/pages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pages })
+      });
+    }
+
+    // Init
+    loadPlugins();
+    loadPages();
+  </script>
+</body>
+</html>

@@ -14,6 +14,16 @@ Open → **http://localhost:3333**
 
 ---
 
+## Admin Panel
+
+Manage plugins at **http://localhost:3333/admin**
+
+- Toggle plugins on/off with a simple switch
+- Disabled plugins won't appear on any page
+- Save changes, then refresh dashboard to apply
+
+---
+
 ## Configuration
 
 **`config.js` is the only file you need to edit.**

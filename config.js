@@ -16,61 +16,32 @@ module.exports = {
 
   // ============================================================
   //  PAGES
+  //  Widget options: position (left/right/full), size (small/full)
   // ============================================================
   pages: [
 
     // ── Page 1: Home ──────────────────────────────────────────
     {
       name: "Home",
-      columns: [
-        {
-          size: "small",
-          widgets: [
-            { type: "time" },
-            { type: "calendar" },
-            { type: "weather" },
-          ],
-        },
-        {
-          size: "full",
-          widgets: [
-            { type: "proxmox" },
-            { type: "feeds" },
-          ],
-        },
-        {
-          size: "small",
-          widgets: [
-            { type: "shoutcast" },
-            { type: "bookmarks" },
-          ],
-        },
+      layout: [
+        { type: "time",      position: "left" },
+        { type: "calendar", position: "left" },
+        { type: "weather",  position: "left" },
+        { type: "proxmox",   position: "full" },
+        { type: "feeds",     position: "full" },
+        { type: "shoutcast", position: "right" },
+        { type: "bookmarks", position: "right" },
       ],
     },
 
     // ── Page 2: Infrastructure ────────────────────────────────
     {
       name: "Infra",
-      columns: [
-        {
-          size: "small",
-          widgets: [
-            { type: "proxmox" },
-          ],
-        },
-        {
-          size: "full",
-          widgets: [
-            { type: "uptime-history" },
-            { type: "gitea-activity" },
-          ],
-        },
-        {
-          size: "small",
-          widgets: [
-            { type: "notes" },
-          ],
-        },
+      layout: [
+        { type: "proxmox",       position: "left" },
+        { type: "uptime-history", position: "full" },
+        { type: "gitea-activity",position: "full" },
+        { type: "notes",         position: "right" },
       ],
     },
 
@@ -87,7 +58,6 @@ module.exports = {
     units: "imperial",
   },
 
-  // ── Feeds (Home page) ─────────────────────────────────────
   feeds: [
     {
       url: "https://news.google.com/rss/topics/CAAqIQgKIhtDQkFTRGdvSUwyMHZNSHByYzNnU0FtVnVLQUFQAQ?hl=en-US&gl=US&ceid=US:en",
@@ -96,23 +66,20 @@ module.exports = {
   ],
   feedsLimit: 30,
 
-  // ── Tech Feeds ────────────────────────────────────────────
   techFeeds: [
     { url: "https://blog.robintehofstee.com/rss.xml", title: "Personal Blog" },
   ],
   techFeedsLimit: 20,
 
-  // ── SHOUTcast ─────────────────────────────────────────────
   shoutcast: {
     statsUrl:     "http://192.168.1.100:8050",
     streamUrl:    "https://carreenradio.com:8840/;rain.mp3",
     name:         "Carreen Radio",
     historyCount: 8,
-    adminUser:    "admin",      // optional: needed for song history
-    adminPass:    "changemenot", // optional: needed for song history
+    adminUser:    "admin",
+    adminPass:    "your-password",
   },
 
-  // ── Navidrome ─────────────────────────────────────────────
   navidrome: {
     url:         "http://192.168.1.75:4533",
     user:        "robin30",
@@ -120,7 +87,6 @@ module.exports = {
     recentCount: 6,
   },
 
-  // ── Notes / Quick Links ───────────────────────────────────
   notes: [
     {
       group: "Quick Links",
@@ -142,7 +108,6 @@ module.exports = {
     },
   ],
 
-  // ── Monitor ───────────────────────────────────────────────
   monitor: [
     { title: "Proxmox",             url: "https://192.168.1.27:8006"  },
     { title: "Portainer",           url: "https://192.168.1.100:9443" },
@@ -152,10 +117,6 @@ module.exports = {
     { title: "Termix",              url: "http://192.168.1.24/"       },
   ],
 
-  // ── Proxmox ───────────────────────────────────────────────
-  // Create an API token: Datacenter → Permissions → API Tokens → Add
-  // Assign PVEAuditor role (read-only is enough)
-  // tokenid format: "user@realm!tokenname" e.g. "root@pam!my-glance"
   proxmox: {
     url:     "https://192.168.1.27:8006",
     tokenid: "root@pam!my-glance",
@@ -163,15 +124,12 @@ module.exports = {
     node:    "rth",
   },
 
-  // ── Gitea ─────────────────────────────────────────────────
-  // Create a token: Gitea → Settings → Applications → Generate Token
   gitea: {
     url:   "http://192.168.1.83:3000",
     user:  "robin30",
     token: "4df28ff4d8bef0cfea3bf95a08401ad1f0280cc8",
   },
 
-  // ── Bookmarks (Home page) ─────────────────────────────────
   bookmarks: [
     {
       group: "Websites",

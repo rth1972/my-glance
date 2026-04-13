@@ -10,6 +10,42 @@ const server  = http.createServer(app);
 const wss    = new WebSocket.Server({ server });
 
 app.use(express.static("public"));
+app.use(express.json());
+
+// ── State files ──────────────────────────────────────────────────────────────
+const STATE_DIR = path.join(__dirname, "state");
+if (!fs.existsSync(STATE_DIR)) fs.mkdirSync(STATE_DIR);
+
+const PLUGIN_STATE_FILE = path.join(STATE_DIR, "plugins.json");
+const PAGES_STATE_FILE = path.join(STATE_DIR, "pages.json");
+
+function loadPluginState() {
+  try {
+    return JSON.parse(fs.readFileSync(PLUGIN_STATE_FILE, "utf8"));
+  } catch {
+    return {};
+  }
+}
+
+function savePluginState(state) {
+  fs.writeFileSync(PLUGIN_STATE_FILE, JSON.stringify(state, null, 2));
+}
+
+function loadPagesConfig() {
+  try {
+    const saved = JSON.parse(fs.readFileSync(PAGES_STATE_FILE, "utf8"));
+    if (saved && Array.isArray(saved)) return saved;
+  } catch {}
+  return null;
+}
+
+function savePagesConfig(pages) {
+  fs.writeFileSync(PAGES_STATE_FILE, JSON.stringify(pages, null, 2));
+}
+
+function getPages() {
+  return loadPagesConfig() || config.pages;
+}
 
 // ── WebSocket broadcasting ───────────────────────────────────────────────────
 const wsClients = new Set();
@@ -27,59 +63,147 @@ function broadcast(event, data) {
   });
 }
 
-// Make broadcast available to plugins
 app.set("broadcast", broadcast);
 
-// ── Auto-load plugins ─────────────────────────────────────────────────────────
+// ── Discover all plugins ────────────────────────────────────────────────────
 const PLUGINS_DIR = path.join(__dirname, "plugins");
 
-const loadedPlugins = fs.readdirSync(PLUGINS_DIR)
-  .sort()
-  .filter(name => {
-    const dir = path.join(PLUGINS_DIR, name);
-    return (
-      fs.statSync(dir).isDirectory() &&
-      fs.existsSync(path.join(dir, "server.js")) &&
-      fs.existsSync(path.join(dir, "client.js"))
-    );
-  })
-  .map(name => {
-    try {
-      require(path.join(PLUGINS_DIR, name, "server.js"))(app, config);
-      console.log(`  ✓ ${name}`);
-      return name;
-    } catch (e) {
-      console.warn(`  ✗ ${name} — ${e.message}`);
-      return null;
-    }
-  })
-  .filter(Boolean);
+function discoverPlugins() {
+  return fs.readdirSync(PLUGINS_DIR)
+    .filter(name => {
+      const dir = path.join(PLUGINS_DIR, name);
+      return (
+        fs.statSync(dir).isDirectory() &&
+        fs.existsSync(path.join(dir, "server.js")) &&
+        fs.existsSync(path.join(dir, "client.js"))
+      );
+    })
+    .sort();
+}
 
-// ── /api/plugins — list of available plugin names ─────────────────────────────
-app.get("/api/plugins", (req, res) => res.json(loadedPlugins));
+function isPluginEnabled(pluginName) {
+  const state = loadPluginState();
+  if (state[pluginName] !== undefined) {
+    return state[pluginName];
+  }
+  return true;
+}
 
-// ── /plugins/:name/client.js — serve each plugin's browser code ───────────────
+// ── Load enabled plugins ────────────────────────────────────────────────────
+const loadedPlugins = [];
+
+discoverPlugins().forEach(name => {
+  if (!isPluginEnabled(name)) {
+    console.log(`  ○ ${name} (disabled)`);
+    return;
+  }
+  try {
+    require(path.join(PLUGINS_DIR, name, "server.js"))(app, config);
+    console.log(`  ✓ ${name}`);
+    loadedPlugins.push(name);
+  } catch (e) {
+    console.warn(`  ✗ ${name} — ${e.message}`);
+  }
+});
+
+// ── Plugin API Routes ────────────────────────────────────────────────────────
+
+app.get("/api/plugins", (req, res) => {
+  const state = loadPluginState();
+  const allPlugins = discoverPlugins();
+  const enabledPlugins = allPlugins.filter(name => state[name] !== false);
+  res.json(enabledPlugins);
+});
+
+app.get("/api/plugins/all", (req, res) => {
+  const all = discoverPlugins();
+  const state = loadPluginState();
+  const plugins = all.map(name => ({
+    name,
+    enabled: state[name] !== undefined ? state[name] : true,
+  }));
+  res.json(plugins);
+});
+
+app.get("/api/plugins/order", (req, res) => {
+  try {
+    res.json(JSON.parse(fs.readFileSync(path.join(STATE_DIR, "plugin-order.json"), "utf8")));
+  } catch {
+    res.json([]);
+  }
+});
+
+app.post("/api/plugins/order", (req, res) => {
+  const { order } = req.body;
+  if (Array.isArray(order)) {
+    fs.writeFileSync(path.join(STATE_DIR, "plugin-order.json"), JSON.stringify(order, null, 2));
+  }
+  res.json({ success: true });
+});
+
+app.post("/api/plugins/save", (req, res) => {
+  const { plugins } = req.body;
+  if (Array.isArray(plugins)) {
+    const state = {};
+    plugins.forEach(p => {
+      if (typeof p.name === "string" && typeof p.enabled === "boolean") {
+        if (!p.enabled) {
+          state[p.name] = false;
+        }
+      }
+    });
+    savePluginState(state);
+  }
+  res.json({ success: true });
+});
+
+// ── Pages API Routes ────────────────────────────────────────────────────────
+
+app.get("/api/pages", (req, res) => {
+  const state = loadPluginState();
+  const allPlugins = discoverPlugins();
+  const enabledPlugins = new Set(allPlugins.filter(name => state[name] !== false));
+  const pages = getPages();
+  
+  res.json(pages.map(p => ({
+    name: p.name,
+    layout: (p.layout || []).filter(w => enabledPlugins.has(w.type)),
+  })));
+});
+
+app.get("/api/pages/full", (req, res) => {
+  res.json(getPages());
+});
+
+app.post("/api/pages", (req, res) => {
+  const { pages } = req.body;
+  if (Array.isArray(pages)) {
+    savePagesConfig(pages);
+  }
+  res.json({ success: true });
+});
+
+// ── Plugin files ────────────────────────────────────────────────────────────
 app.get("/plugins/:name/client.js", (req, res) => {
-  const file = path.join(PLUGINS_DIR, req.params.name, "client.js");
+  const name = req.params.name;
+  if (!isPluginEnabled(name)) {
+    return res.status(404).send("Not found");
+  }
+  const file = path.join(PLUGINS_DIR, name, "client.js");
   if (!fs.existsSync(file)) return res.status(404).send("Not found");
   res.setHeader("Content-Type", "application/javascript");
   res.sendFile(file);
 });
 
-// ── /api/pages — page layout from config ──────────────────────────────────────
-app.get("/api/pages", (req, res) => {
-  res.json(config.pages.map(p => ({
-    name: p.name,
-    columns: p.columns.map(col => ({
-      size: col.size,
-      widgets: col.widgets.map(w => w.type),
-    })),
-  })));
+// ── Admin page ──────────────────────────────────────────────────────────────
+app.get("/admin", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "admin.html"));
 });
 
 // ── Start ─────────────────────────────────────────────────────────────────────
 server.listen(config.port, () => {
   console.log(`\nmy-glance → http://localhost:${config.port}`);
+  console.log(`Admin     → http://localhost:${config.port}/admin`);
   console.log(`Loaded ${loadedPlugins.length} plugins: ${loadedPlugins.join(", ")}`);
   console.log(`WebSocket  → ws://localhost:${config.port}/ws\n`);
 });

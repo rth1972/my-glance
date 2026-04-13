@@ -1,0 +1,48 @@
+[
+  {
+    "name": "Home",
+    "layout": [
+      {
+        "type": "time",
+        "position": "left"
+      },
+      {
+        "type": "calendar",
+        "position": "left"
+      },
+      {
+        "type": "weather",
+        "position": "left"
+      },
+      {
+        "type": "proxmox",
+        "position": "full"
+      },
+      {
+        "type": "shoutcast",
+        "position": "right"
+      },
+      {
+        "type": "bookmarks",
+        "position": "right"
+      }
+    ]
+  },
+  {
+    "name": "News",
+    "layout": [
+      {
+        "type": "wallpaper",
+        "position": "left"
+      },
+      {
+        "type": "feeds",
+        "position": "full"
+      },
+      {
+        "type": "navidrome",
+        "position": "right"
+      }
+    ]
+  }
+]

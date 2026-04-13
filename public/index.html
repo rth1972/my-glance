@@ -311,28 +311,64 @@
   };
 
   async function buildPage(page) {
-    const pageEl  = el("div", "page hidden");
-    const isSlim  = page.columns.length === 1 && page.columns[0].size === "full";
+    const pageEl = el("div", "page hidden");
     pageEl.classList.add("px-3","py-3","md:px-4","md:py-4","mx-auto","max-w-[1600px]");
-    const numCols = page.columns.length;
-    const grid    = el("div","");
-    if      (isSlim)        grid.className = "max-w-lg mx-auto mt-8 md:mt-12 flex flex-col gap-4";
-    else if (numCols === 1) grid.className = "flex flex-col gap-4";
-    else if (numCols === 2) grid.className = "flex flex-col md:flex-row gap-4 items-start";
-    else                    grid.className = "flex flex-col md:grid md:grid-cols-2 lg:grid lg:grid-cols-[280px_1fr_280px] gap-4 items-start";
 
-    for (const col of page.columns) {
-      const colEl = el("div","flex flex-col gap-4 min-w-0");
-      if (!isSlim && numCols === 3 && col.size === "full") colEl.classList.add("md:col-span-2","lg:col-span-1");
-      if (!isSlim && numCols === 2) col.size === "small" ? colEl.classList.add("md:w-[280px]","shrink-0") : colEl.classList.add("flex-1");
-      for (const widgetType of col.widgets) {
+    const layout = page.layout || [];
+    const leftWidgets  = layout.filter(w => w.position === "left");
+    const rightWidgets = layout.filter(w => w.position === "right");
+    const fullWidgets  = layout.filter(w => w.position === "full" || !w.position);
+
+    const hasLeft  = leftWidgets.length > 0;
+    const hasRight = rightWidgets.length > 0;
+    const grid     = el("div","");
+
+    if (!hasLeft && !hasRight) {
+      grid.className = "max-w-lg mx-auto mt-8 md:mt-12 flex flex-col gap-4";
+      for (const w of fullWidgets) {
         const wEl = el("div","");
-        wEl.dataset.widgetType = widgetType;
-        colEl.appendChild(wEl);
-        await MyGlance.mount(widgetType, wEl);
+        wEl.dataset.widgetType = w.type;
+        grid.appendChild(wEl);
+        await MyGlance.mount(w.type, wEl);
       }
-      grid.appendChild(colEl);
+    } else if (!hasLeft || !hasRight) {
+      grid.className = "flex flex-col gap-4";
+      for (const w of [...leftWidgets, ...rightWidgets, ...fullWidgets]) {
+        const wEl = el("div","");
+        wEl.dataset.widgetType = w.type;
+        grid.appendChild(wEl);
+        await MyGlance.mount(w.type, wEl);
+      }
+    } else {
+      grid.className = "flex flex-col md:flex-row gap-4 items-start";
+      const leftCol  = el("div","flex flex-col gap-4 min-w-0 md:w-[280px] shrink-0");
+      const rightCol = el("div","flex flex-col gap-4 min-w-0 md:w-[280px] shrink-0");
+      const centerCol = el("div","flex flex-col gap-4 min-w-0 flex-1");
+
+      for (const w of leftWidgets) {
+        const wEl = el("div","");
+        wEl.dataset.widgetType = w.type;
+        leftCol.appendChild(wEl);
+        await MyGlance.mount(w.type, wEl);
+      }
+      for (const w of fullWidgets) {
+        const wEl = el("div","");
+        wEl.dataset.widgetType = w.type;
+        centerCol.appendChild(wEl);
+        await MyGlance.mount(w.type, wEl);
+      }
+      for (const w of rightWidgets) {
+        const wEl = el("div","");
+        wEl.dataset.widgetType = w.type;
+        rightCol.appendChild(wEl);
+        await MyGlance.mount(w.type, wEl);
+      }
+
+      grid.appendChild(leftCol);
+      grid.appendChild(centerCol);
+      grid.appendChild(rightCol);
     }
+
     pageEl.appendChild(grid);
     return pageEl;
   }
